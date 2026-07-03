@@ -13,6 +13,8 @@
   --warn: #875a00;
   --ok: #246b3d;
   --shadow: 0 6px 16px rgba(17, 27, 38, 0.06);
+  --plot-width: 720px;
+  --plot-height: 80px;
 }
 
 * {
@@ -154,7 +156,7 @@ h1 {
 
 .table-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(292px, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
@@ -248,13 +250,13 @@ h1 {
 }
 
 .breakpoint-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
 .breakpoint-table {
-  min-width: max-content;
   table-layout: fixed;
+  width: 100%;
 }
 
 .breakpoint-table th,
@@ -269,7 +271,7 @@ h1 {
 }
 
 .axis-label {
-  width: 30px;
+  width: 34px;
   background: #fbfcfd;
   color: var(--muted);
   font-size: 11px;
@@ -279,8 +281,7 @@ h1 {
 }
 
 .point-cell {
-  width: 54px;
-  min-width: 54px;
+  min-width: 0;
 }
 
 .point-number {
@@ -298,6 +299,11 @@ h1 {
   text-align: right;
 }
 
+.breakpoint-table input::-webkit-outer-spin-button,
+.breakpoint-table input::-webkit-inner-spin-button {
+  margin: 0;
+}
+
 .plot-wrap {
   display: grid;
   gap: 1px;
@@ -308,14 +314,15 @@ h1 {
 
 .table-plot {
   display: block;
-  width: 100%;
-  height: 50px;
+  width: min(100%, var(--plot-width));
+  height: var(--plot-height);
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 5px;
 }
 
-.plot-axis {
+.plot-axis-x,
+.plot-axis-y {
   stroke: var(--line-strong);
   stroke-width: 1;
 }
@@ -384,15 +391,6 @@ h1 {
     justify-content: start;
   }
 
-  .table-grid {
-    grid-template-columns: repeat(2, minmax(360px, 1fr));
-  }
-}
-
-@media (max-width: 860px) {
-  .table-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 640px) {

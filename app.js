@@ -12,6 +12,8 @@
   var TABLE_COUNT = 8;
   var DEFAULT_ROW_COUNT = 5;
   var MAX_ROW_COUNT = 64;
+  var DEFAULT_PLOT_WIDTH = 720;
+  var DEFAULT_PLOT_HEIGHT = 80;
   var STORAGE_KEY = "linear-interpolation-tool-state-v1";
 
   function parseFiniteNumber(value) {
@@ -72,6 +74,8 @@
   function makeDefaultState() {
     return {
       targetX: "40",
+      plotWidth: DEFAULT_PLOT_WIDTH,
+      plotHeight: DEFAULT_PLOT_HEIGHT,
       tables: Array.from({ length: TABLE_COUNT }, function (_, tableIndex) {
         return {
           name: "Table " + (tableIndex + 1),
@@ -130,6 +134,18 @@
         candidate.targetX !== undefined && candidate.targetX !== null
           ? String(candidate.targetX)
           : fallback.targetX,
+      plotWidth: clampInteger(
+        candidate.plotWidth,
+        240,
+        1600,
+        fallback.plotWidth,
+      ),
+      plotHeight: clampInteger(
+        candidate.plotHeight,
+        40,
+        360,
+        fallback.plotHeight,
+      ),
       tables: tables,
       updatedAt:
         candidate.updatedAt !== undefined && candidate.updatedAt !== null
@@ -296,6 +312,14 @@
 
   function updatePlot(view, table, result) {
     var points = getCompleteSortedPoints(table.rows);
+    var plotWidth = Number(view.plotSvg.getAttribute("data-plot-width")) || DEFAULT_PLOT_WIDTH;
+    var plotHeight = Number(view.plotSvg.getAttribute("data-plot-height")) || DEFAULT_PLOT_HEIGHT;
+    var left = 30;
+    var right = Math.max(left + 20, plotWidth - 24);
+    var top = 8;
+    var bottom = Math.max(top + 20, plotHeight - 22);
+    var middleX = (left + right) / 2;
+    var middleY = (top + bottom) / 2;
     var plot = view.plot;
     var pointLayer = view.plotPointLayer;
     var emptyText = view.plotEmpty;
@@ -305,6 +329,17 @@
     var xMaxText = view.plotXMax;
 
     pointLayer.replaceChildren();
+    view.plotSvg.setAttribute("viewBox", "0 0 " + plotWidth + " " + plotHeight);
+    view.plotAxisX.setAttribute("x1", String(left));
+    view.plotAxisX.setAttribute("y1", String(bottom));
+    view.plotAxisX.setAttribute("x2", String(right));
+    view.plotAxisX.setAttribute("y2", String(bottom));
+    view.plotAxisY.setAttribute("x1", String(left));
+    view.plotAxisY.setAttribute("y1", String(top));
+    view.plotAxisY.setAttribute("x2", String(left));
+    view.plotAxisY.setAttribute("y2", String(bottom));
+    emptyText.setAttribute("x", String(middleX));
+    emptyText.setAttribute("y", String(middleY));
 
     if (points.length < 2) {
       plot.setAttribute("points", "");
@@ -323,8 +358,8 @@
     });
     var minY = Math.min.apply(null, yValues);
     var maxY = Math.max.apply(null, yValues);
-    var scaleX = makeScale(minX, maxX, 26, 342);
-    var scaleY = makeScale(minY, maxY, 38, 7);
+    var scaleX = makeScale(minX, maxX, left, right);
+    var scaleY = makeScale(minY, maxY, bottom, top);
     var svgDocument = pointLayer.ownerDocument;
     var polylinePoints = points
       .map(function (point) {
@@ -353,7 +388,9 @@
       var inputY = scaleY(result.y);
 
       inputLine.setAttribute("x1", formatNumber(inputX));
+      inputLine.setAttribute("y1", String(top));
       inputLine.setAttribute("x2", formatNumber(inputX));
+      inputLine.setAttribute("y2", String(bottom));
       inputLine.style.display = "block";
       inputPoint.setAttribute("cx", formatNumber(inputX));
       inputPoint.setAttribute("cy", formatNumber(inputY));
@@ -438,6 +475,24 @@
     } catch (error) {
       setSaveStatus(statusNode, "Not saved locally", "error");
     }
+  }
+
+  function applyPlotSettings(documentRef, state, tableViews) {
+    documentRef.documentElement.style.setProperty(
+      "--plot-width",
+      state.plotWidth + "px",
+    );
+    documentRef.documentElement.style.setProperty(
+      "--plot-height",
+      state.plotHeight + "px",
+    );
+
+    tableViews.forEach(function (view) {
+      if (view && view.plotSvg) {
+        view.plotSvg.setAttribute("data-plot-width", String(state.plotWidth));
+        view.plotSvg.setAttribute("data-plot-height", String(state.plotHeight));
+      }
+    });
   }
 
   function setRowCount(table, rowCount, tableIndex) {
@@ -529,6 +584,8 @@
     var applyTargetButton = documentRef.getElementById("apply-target-x");
     var allRowCountInput = documentRef.getElementById("all-row-count");
     var applyRowCountButton = documentRef.getElementById("apply-row-count");
+    var plotWidthInput = documentRef.getElementById("plot-width");
+    var plotHeightInput = documentRef.getElementById("plot-height");
     var resetSampleButton = documentRef.getElementById("reset-sample");
     var clearAllButton = documentRef.getElementById("clear-all");
     var saveStateNode = documentRef.getElementById("save-state");
@@ -582,6 +639,9 @@
       var resultY = fragment.querySelector(".table-result-y");
       var resultDetail = fragment.querySelector(".table-result-detail");
       var breakpointBody = fragment.querySelector(".breakpoint-body");
+      var plotSvg = fragment.querySelector(".table-plot");
+      var plotAxisX = fragment.querySelector(".plot-axis-x");
+      var plotAxisY = fragment.querySelector(".plot-axis-y");
       var plot = fragment.querySelector(".plot-line");
       var plotPointLayer = fragment.querySelector(".plot-point-layer");
       var plotInputLine = fragment.querySelector(".plot-input-line");
@@ -638,6 +698,9 @@
         targetXInput: tableTargetInput,
         resultY: resultY,
         resultDetail: resultDetail,
+        plotSvg: plotSvg,
+        plotAxisX: plotAxisX,
+        plotAxisY: plotAxisY,
         plot: plot,
         plotPointLayer: plotPointLayer,
         plotInputLine: plotInputLine,
@@ -650,7 +713,10 @@
 
     allTargetInput.value = state.targetX;
     allRowCountInput.value = String(DEFAULT_ROW_COUNT);
+    plotWidthInput.value = String(state.plotWidth);
+    plotHeightInput.value = String(state.plotHeight);
     state.tables.forEach(renderTable);
+    applyPlotSettings(documentRef, state, tableViews);
 
     if (savedState.error) {
       setSaveStatus(saveStateNode, "Using defaults; local save unavailable", "error");
@@ -697,15 +763,76 @@
       tableGrid.replaceChildren();
       tableViews = [];
       state.tables.forEach(renderTable);
+      applyPlotSettings(documentRef, state, tableViews);
       persistAndCalculate();
+    });
+
+    function updatePlotWidth(commit) {
+      var nextWidth = Number.parseInt(plotWidthInput.value, 10);
+      if (!Number.isFinite(nextWidth)) {
+        if (commit) {
+          plotWidthInput.value = String(state.plotWidth);
+        }
+        return;
+      }
+
+      if (nextWidth < 240 || nextWidth > 1600) {
+        if (!commit) {
+          return;
+        }
+        nextWidth = clampInteger(nextWidth, 240, 1600, DEFAULT_PLOT_WIDTH);
+        plotWidthInput.value = String(nextWidth);
+      }
+
+      state.plotWidth = nextWidth;
+      applyPlotSettings(documentRef, state, tableViews);
+      persistAndCalculate();
+    }
+
+    function updatePlotHeight(commit) {
+      var nextHeight = Number.parseInt(plotHeightInput.value, 10);
+      if (!Number.isFinite(nextHeight)) {
+        if (commit) {
+          plotHeightInput.value = String(state.plotHeight);
+        }
+        return;
+      }
+
+      if (nextHeight < 40 || nextHeight > 360) {
+        if (!commit) {
+          return;
+        }
+        nextHeight = clampInteger(nextHeight, 40, 360, DEFAULT_PLOT_HEIGHT);
+        plotHeightInput.value = String(nextHeight);
+      }
+
+      state.plotHeight = nextHeight;
+      applyPlotSettings(documentRef, state, tableViews);
+      persistAndCalculate();
+    }
+
+    plotWidthInput.addEventListener("input", function () {
+      updatePlotWidth(false);
+    });
+    plotWidthInput.addEventListener("change", function () {
+      updatePlotWidth(true);
+    });
+    plotHeightInput.addEventListener("input", function () {
+      updatePlotHeight(false);
+    });
+    plotHeightInput.addEventListener("change", function () {
+      updatePlotHeight(true);
     });
 
     resetSampleButton.addEventListener("click", function () {
       state = makeDefaultState();
       allTargetInput.value = state.targetX;
+      plotWidthInput.value = String(state.plotWidth);
+      plotHeightInput.value = String(state.plotHeight);
       tableGrid.replaceChildren();
       tableViews = [];
       state.tables.forEach(renderTable);
+      applyPlotSettings(documentRef, state, tableViews);
       persistAndCalculate();
     });
 
@@ -716,6 +843,7 @@
       tableGrid.replaceChildren();
       tableViews = [];
       state.tables.forEach(renderTable);
+      applyPlotSettings(documentRef, state, tableViews);
       persistAndCalculate();
     });
 
@@ -732,6 +860,8 @@
     TABLE_COUNT: TABLE_COUNT,
     DEFAULT_ROW_COUNT: DEFAULT_ROW_COUNT,
     MAX_ROW_COUNT: MAX_ROW_COUNT,
+    DEFAULT_PLOT_WIDTH: DEFAULT_PLOT_WIDTH,
+    DEFAULT_PLOT_HEIGHT: DEFAULT_PLOT_HEIGHT,
     calculateLinearInterpolation: calculateLinearInterpolation,
     formatNumber: formatNumber,
     getCompleteSortedPoints: getCompleteSortedPoints,
