@@ -140,6 +140,18 @@ h1 {
   text-align: right;
 }
 
+.save-state.status-ok {
+  color: var(--ok);
+}
+
+.save-state.status-warn {
+  color: var(--warn);
+}
+
+.save-state.status-error {
+  color: var(--danger);
+}
+
 .table-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(520px, 1fr));

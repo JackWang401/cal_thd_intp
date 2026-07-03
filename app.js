@@ -131,6 +131,10 @@
           ? String(candidate.targetX)
           : fallback.targetX,
       tables: tables,
+      updatedAt:
+        candidate.updatedAt !== undefined && candidate.updatedAt !== null
+          ? String(candidate.updatedAt)
+          : null,
     };
   }
 
@@ -257,21 +261,79 @@
     };
   }
 
-  function loadState() {
+  function setSaveStatus(statusNode, text, level) {
+    if (!statusNode) {
+      return;
+    }
+
+    statusNode.textContent = text;
+    statusNode.className = "save-state";
+    if (level) {
+      statusNode.classList.add("status-" + level);
+    }
+  }
+
+  function formatSavedAt(isoValue) {
+    if (!isoValue) {
+      return "";
+    }
+
+    var date = new Date(isoValue);
+    if (!Number.isFinite(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
+
+  function readSavedState() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return {
+        state: makeDefaultState(),
+        restored: false,
+        error: false,
+      };
+    }
+
     try {
       var raw = window.localStorage.getItem(STORAGE_KEY);
-      return raw ? normalizeState(JSON.parse(raw)) : makeDefaultState();
+      if (!raw) {
+        return {
+          state: makeDefaultState(),
+          restored: false,
+          error: false,
+        };
+      }
+
+      return {
+        state: normalizeState(JSON.parse(raw)),
+        restored: true,
+        error: false,
+      };
     } catch (error) {
-      return makeDefaultState();
+      return {
+        state: makeDefaultState(),
+        restored: false,
+        error: true,
+      };
     }
+  }
+
+  function loadState() {
+    return readSavedState().state;
   }
 
   function saveState(state, statusNode) {
     try {
+      state.updatedAt = new Date().toISOString();
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      statusNode.textContent = "Saved locally";
+      setSaveStatus(statusNode, "Autosaved " + formatSavedAt(state.updatedAt), "ok");
     } catch (error) {
-      statusNode.textContent = "Not saved";
+      setSaveStatus(statusNode, "Not saved locally", "error");
     }
   }
 
@@ -358,7 +420,8 @@
 
   function startApp(doc) {
     var documentRef = doc || document;
-    var state = loadState();
+    var savedState = readSavedState();
+    var state = savedState.state;
     var allTargetInput = documentRef.getElementById("all-target-x");
     var applyTargetButton = documentRef.getElementById("apply-target-x");
     var allRowCountInput = documentRef.getElementById("all-row-count");
@@ -471,6 +534,20 @@
     allRowCountInput.value = String(DEFAULT_ROW_COUNT);
     state.tables.forEach(renderTable);
 
+    if (savedState.error) {
+      setSaveStatus(saveStateNode, "Using defaults; local save unavailable", "error");
+    } else if (savedState.restored) {
+      var restoredAt = formatSavedAt(state.updatedAt);
+      setSaveStatus(
+        saveStateNode,
+        restoredAt ? "Restored saved data " + restoredAt : "Restored saved data",
+        "ok",
+      );
+    } else {
+      setSaveStatus(saveStateNode, "Using sample data", "warn");
+      saveState(state, saveStateNode);
+    }
+
     allTargetInput.addEventListener("input", function () {
       state.targetX = allTargetInput.value;
       saveState(state, saveStateNode);
@@ -541,5 +618,6 @@
     formatNumber: formatNumber,
     makeDefaultState: makeDefaultState,
     normalizeState: normalizeState,
+    loadState: loadState,
   };
 });

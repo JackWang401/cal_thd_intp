@@ -55,6 +55,7 @@ assert.equal(incompleteRows.message, "No complete rows");
 
 const migratedState = normalizeState({
   targetX: "12.5",
+  updatedAt: "2026-07-04T00:00:00.000Z",
   tables: [
     {
       name: "Legacy Table",
@@ -65,5 +66,6 @@ const migratedState = normalizeState({
 });
 assert.equal(migratedState.tables[0].targetX, "12.5");
 assert.equal(migratedState.tables.length, 8);
+assert.equal(migratedState.updatedAt, "2026-07-04T00:00:00.000Z");
 
 console.log("Interpolation tests passed");

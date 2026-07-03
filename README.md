@@ -12,7 +12,8 @@ Static browser tool for checking linear interpolation across eight x/y tables at
 - Each table can use a different number of breakpoints, from 1 to 64 points.
 - Breakpoints may be entered in any order; calculation sorts by `x`.
 - Duplicate `x` values are rejected because interpolation would be ambiguous.
-- Table data is saved in browser local storage.
+- Previous table data is restored automatically from browser local storage.
+- Every edit is autosaved locally in the browser.
 
 ## Use
 
@@ -23,6 +24,8 @@ Open `index.html` in a browser.
 3. Adjust each table's `Points` value, or use the global `Points` field with `Apply Points`.
 4. Read the interpolated or clamped value in that table's `Output Y` field.
 5. Use `All X` and `Apply X` when every table should use the same input value.
+
+The tool remembers table names, enabled states, point counts, X/Y breakpoints, and input X values in the same browser.
 
 ## Version Control
 
