@@ -1,8 +1,7 @@
 :root {
   color-scheme: light;
-  --bg: #f6f7f8;
+  --bg: #f4f6f7;
   --panel: #ffffff;
-  --panel-soft: #f9fafb;
   --text: #172026;
   --muted: #66717d;
   --line: #d9dfe5;
@@ -13,7 +12,7 @@
   --danger: #b83b35;
   --warn: #875a00;
   --ok: #246b3d;
-  --shadow: 0 10px 30px rgba(17, 27, 38, 0.08);
+  --shadow: 0 6px 16px rgba(17, 27, 38, 0.06);
 }
 
 * {
@@ -28,7 +27,7 @@ body {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 button,
@@ -37,13 +36,14 @@ input {
 }
 
 button {
-  min-height: 36px;
+  min-height: 28px;
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  padding: 0 12px;
+  padding: 0 9px;
+  white-space: nowrap;
   transition:
     background 120ms ease,
     border-color 120ms ease,
@@ -56,13 +56,13 @@ button:hover {
 }
 
 input {
-  min-height: 34px;
+  min-height: 26px;
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 4px;
   background: #fff;
   color: var(--text);
-  padding: 6px 8px;
+  padding: 3px 6px;
 }
 
 input:focus,
@@ -77,119 +77,149 @@ table {
   width: 100%;
 }
 
-th {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
-  text-align: left;
-  text-transform: uppercase;
-}
-
 .app-shell {
-  width: min(1720px, calc(100vw - 32px));
+  width: min(1840px, calc(100vw - 20px));
   margin: 0 auto;
-  padding: 24px 0 36px;
+  padding: 10px 0 14px;
 }
 
 .app-header {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
-  gap: 18px;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: 12px;
   align-items: end;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
 }
 
 .eyebrow {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: var(--accent-strong);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 750;
   letter-spacing: 0;
 }
 
-h1,
-h2 {
-  margin: 0;
-  line-height: 1.15;
-}
-
 h1 {
-  font-size: 28px;
+  margin: 0;
+  font-size: 22px;
   font-weight: 760;
-}
-
-h2 {
-  font-size: 18px;
-  font-weight: 720;
+  line-height: 1.15;
 }
 
 .global-controls {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 6px;
   align-items: end;
 }
 
 .field,
-.row-stepper {
+.row-stepper,
+.table-value-field {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
 }
 
 .field {
-  width: 180px;
+  width: 112px;
 }
 
 .field.compact,
 .row-stepper {
-  width: 76px;
-}
-
-.summary-section {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-  padding: 14px 16px;
+  width: 58px;
 }
 
 .save-state {
+  margin: 6px 2px 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  text-align: right;
 }
 
-.result-table-wrap {
-  overflow-x: auto;
+.table-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(520px, 1fr));
+  gap: 8px;
 }
 
-.result-table th,
-.result-table td {
+.table-card {
+  display: grid;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.table-card-header {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 82px 90px 58px auto;
+  gap: 6px;
+  align-items: end;
   border-bottom: 1px solid var(--line);
-  padding: 10px 16px;
+  padding: 6px;
+}
+
+.table-title {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 5px;
+  align-items: end;
+}
+
+.table-title input[type="checkbox"] {
+  align-self: center;
+  width: 15px;
+  min-height: 15px;
+  padding: 0;
+}
+
+.table-name {
+  font-weight: 720;
+}
+
+.output-field output {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: flex-end;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+  overflow: hidden;
+  padding: 3px 6px;
+  text-align: right;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.result-table tr:last-child td {
-  border-bottom: 0;
+.table-card-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
 }
 
-.result-value {
-  font-variant-numeric: tabular-nums;
-  font-weight: 760;
+.table-card-actions button {
+  padding: 0 7px;
+}
+
+.table-result-detail {
+  grid-column: 1 / -1;
+  min-height: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-ok {
@@ -204,127 +234,66 @@ h2 {
   color: var(--danger);
 }
 
-.table-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(280px, 1fr));
-  gap: 14px;
-}
-
-.table-card {
-  display: grid;
-  min-width: 0;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-.table-card-header {
-  display: grid;
-  gap: 10px;
-  border-bottom: 1px solid var(--line);
-  padding: 12px;
-}
-
-.table-title {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.table-title input[type="checkbox"] {
-  width: 16px;
-  min-height: 16px;
-  padding: 0;
-}
-
-.table-name {
-  font-weight: 720;
-}
-
-.table-card-actions {
-  display: grid;
-  grid-template-columns: 76px 1fr 1fr;
-  gap: 8px;
-  align-items: end;
-}
-
-.table-card-actions button {
-  padding: 0 8px;
-}
-
-.table-result {
-  display: grid;
-  grid-template-columns: minmax(88px, auto) minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  background: var(--accent-soft);
-  border-bottom: 1px solid var(--line);
-  padding: 10px 12px;
-  min-height: 52px;
-}
-
-.table-result-y {
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.table-result-detail {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
 .breakpoint-wrap {
-  max-height: 390px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .breakpoint-table {
+  min-width: max-content;
   table-layout: fixed;
 }
 
 .breakpoint-table th,
 .breakpoint-table td {
   border-bottom: 1px solid var(--line);
-  padding: 6px 8px;
+  padding: 2px 4px;
 }
 
-.breakpoint-table th:first-child,
-.breakpoint-table td:first-child {
-  width: 42px;
-  color: var(--muted);
-  text-align: right;
-}
-
+.breakpoint-table tr:last-child th,
 .breakpoint-table tr:last-child td {
   border-bottom: 0;
 }
 
+.axis-label {
+  width: 30px;
+  background: #fbfcfd;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.point-cell {
+  width: 68px;
+  min-width: 68px;
+}
+
+.point-number {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-align: center;
+}
+
 .breakpoint-table input {
   min-width: 0;
+  min-height: 24px;
+  padding: 2px 4px;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .table-card.disabled {
   opacity: 0.62;
 }
 
-.table-card.disabled .breakpoint-wrap,
-.table-card.disabled .table-result {
+.table-card.disabled .breakpoint-wrap {
   pointer-events: none;
 }
 
-@media (max-width: 1280px) {
-  .table-grid {
-    grid-template-columns: repeat(3, minmax(280px, 1fr));
-  }
-}
-
-@media (max-width: 960px) {
+@media (max-width: 1120px) {
   .app-header {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -335,23 +304,22 @@ h2 {
   }
 
   .table-grid {
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
   .app-shell {
-    width: min(100vw - 20px, 620px);
-    padding-top: 14px;
+    width: min(100vw - 12px, 620px);
   }
 
   h1 {
-    font-size: 23px;
+    font-size: 20px;
   }
 
   .global-controls {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .field,
@@ -360,7 +328,16 @@ h2 {
     width: 100%;
   }
 
-  .table-grid {
-    grid-template-columns: 1fr;
+  .table-card-header {
+    grid-template-columns: minmax(120px, 1fr) 78px 86px;
+  }
+
+  .row-stepper,
+  .table-card-actions {
+    grid-column: span 1;
+  }
+
+  .table-card-actions {
+    justify-content: start;
   }
 }

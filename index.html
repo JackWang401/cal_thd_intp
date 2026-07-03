@@ -10,45 +10,27 @@
     <main class="app-shell">
       <header class="app-header">
         <div>
-          <p class="eyebrow">v0.1.0</p>
+          <p class="eyebrow">v0.2.0</p>
           <h1>Table Linear Interpolation</h1>
         </div>
         <div class="global-controls" aria-label="Global controls">
           <label class="field">
-            <span>Input X</span>
-            <input id="target-x" type="number" step="any" inputmode="decimal">
+            <span>All X</span>
+            <input id="all-target-x" type="number" step="any" inputmode="decimal">
           </label>
+          <button id="apply-target-x" type="button">Apply X</button>
           <label class="field compact">
-            <span>Rows</span>
+            <span>Points</span>
             <input id="all-row-count" type="number" min="1" max="64" step="1">
           </label>
-          <button id="apply-row-count" type="button">Apply Rows</button>
+          <button id="apply-row-count" type="button">Apply Points</button>
           <button id="reset-sample" type="button">Sample</button>
           <button id="clear-all" type="button">Clear</button>
         </div>
       </header>
 
-      <section class="summary-section" aria-labelledby="summary-title">
-        <div class="section-heading">
-          <h2 id="summary-title">Results</h2>
-          <span id="save-state" class="save-state">Saved locally</span>
-        </div>
-        <div class="result-table-wrap">
-          <table class="result-table">
-            <thead>
-              <tr>
-                <th>Table</th>
-                <th>Y</th>
-                <th>Status</th>
-                <th>Range</th>
-              </tr>
-            </thead>
-            <tbody id="summary-body"></tbody>
-          </table>
-        </div>
-      </section>
-
       <section id="table-grid" class="table-grid" aria-label="Interpolation tables"></section>
+      <p id="save-state" class="save-state">Saved locally</p>
     </main>
 
     <template id="table-card-template">
@@ -58,28 +40,26 @@
             <input class="table-enabled" type="checkbox">
             <input class="table-name" type="text" maxlength="32">
           </label>
+          <label class="table-value-field">
+            <span>Input X</span>
+            <input class="table-target-x" type="number" step="any" inputmode="decimal">
+          </label>
+          <label class="table-value-field output-field">
+            <span>Output Y</span>
+            <output class="table-result-y">--</output>
+          </label>
+          <label class="row-stepper">
+            <span>Points</span>
+            <input class="row-count" type="number" min="1" max="64" step="1">
+          </label>
           <div class="table-card-actions">
-            <label class="row-stepper">
-              <span>Rows</span>
-              <input class="row-count" type="number" min="1" max="64" step="1">
-            </label>
             <button class="sample-table" type="button">Sample</button>
             <button class="clear-table" type="button">Clear</button>
           </div>
-        </div>
-        <div class="table-result" aria-live="polite">
-          <strong class="table-result-y">--</strong>
-          <span class="table-result-detail">No complete rows</span>
+          <span class="table-result-detail" aria-live="polite">No complete rows</span>
         </div>
         <div class="breakpoint-wrap">
           <table class="breakpoint-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>X</th>
-                <th>Y</th>
-              </tr>
-            </thead>
             <tbody class="breakpoint-body"></tbody>
           </table>
         </div>

@@ -4,10 +4,12 @@ Static browser tool for checking linear interpolation across eight x/y tables at
 
 ## Features
 
-- Eight editable tables are available on one screen.
-- A shared `Input X` value recalculates every enabled table automatically.
+- Eight compact editable tables are available on one screen.
+- Each table displays breakpoints horizontally, with one `X` row and one `Y` row.
+- Each table has its own `Input X` field and `Output Y` result field.
+- The `All X` control can apply one input value to every table.
 - Out-of-range `x` values clamp to the nearest endpoint `y`.
-- Each table can use a different number of breakpoints, from 1 to 64 rows.
+- Each table can use a different number of breakpoints, from 1 to 64 points.
 - Breakpoints may be entered in any order; calculation sorts by `x`.
 - Duplicate `x` values are rejected because interpolation would be ambiguous.
 - Table data is saved in browser local storage.
@@ -16,10 +18,11 @@ Static browser tool for checking linear interpolation across eight x/y tables at
 
 Open `index.html` in a browser.
 
-1. Enter the target value in `Input X`.
-2. Edit each table's `X` and `Y` breakpoint rows.
-3. Adjust each table's `Rows` value, or use the global `Rows` field with `Apply Rows`.
-4. Read the interpolated or clamped `Y` result in the Results table.
+1. Enter the target value in a table's `Input X` field.
+2. Edit that table's horizontal `X` and `Y` breakpoint rows.
+3. Adjust each table's `Points` value, or use the global `Points` field with `Apply Points`.
+4. Read the interpolated or clamped value in that table's `Output Y` field.
+5. Use `All X` and `Apply X` when every table should use the same input value.
 
 ## Version Control
 

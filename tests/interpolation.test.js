@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { calculateLinearInterpolation } = require("../app");
+const { calculateLinearInterpolation, normalizeState } = require("../app");
 
 function y(rows, x) {
   const result = calculateLinearInterpolation(rows, x);
@@ -52,5 +52,18 @@ const incompleteRows = calculateLinearInterpolation(
 );
 assert.equal(incompleteRows.ok, false);
 assert.equal(incompleteRows.message, "No complete rows");
+
+const migratedState = normalizeState({
+  targetX: "12.5",
+  tables: [
+    {
+      name: "Legacy Table",
+      enabled: true,
+      rows,
+    },
+  ],
+});
+assert.equal(migratedState.tables[0].targetX, "12.5");
+assert.equal(migratedState.tables.length, 8);
 
 console.log("Interpolation tests passed");

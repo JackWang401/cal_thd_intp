@@ -76,6 +76,7 @@
         return {
           name: "Table " + (tableIndex + 1),
           enabled: true,
+          targetX: "40",
           rows: makeRows(DEFAULT_ROW_COUNT, tableIndex, true),
         };
       }),
@@ -114,6 +115,12 @@
             ? table.name.slice(0, 32)
             : fallbackTable.name,
         enabled: table && typeof table.enabled === "boolean" ? table.enabled : true,
+        targetX:
+          table && table.targetX !== undefined && table.targetX !== null
+            ? String(table.targetX)
+            : candidate.targetX !== undefined && candidate.targetX !== null
+              ? String(candidate.targetX)
+              : fallback.targetX,
         rows: normalizedRows.length > 0 ? normalizedRows : makeRows(1, tableIndex, false),
       };
     });
@@ -283,17 +290,41 @@
   }
 
   function renderBreakpointRows(body, table, tableIndex, onChange) {
+    var documentRef = body.ownerDocument;
+    var indexRow = documentRef.createElement("tr");
+    var xRow = documentRef.createElement("tr");
+    var yRow = documentRef.createElement("tr");
+    var indexLabel = documentRef.createElement("th");
+    var xLabel = documentRef.createElement("th");
+    var yLabel = documentRef.createElement("th");
+
     body.replaceChildren();
 
-    table.rows.forEach(function (row, rowIndex) {
-      var tr = document.createElement("tr");
-      var indexCell = document.createElement("td");
-      var xCell = document.createElement("td");
-      var yCell = document.createElement("td");
-      var xInput = document.createElement("input");
-      var yInput = document.createElement("input");
+    indexLabel.scope = "row";
+    indexLabel.className = "axis-label";
+    indexLabel.textContent = "#";
+    xLabel.scope = "row";
+    xLabel.className = "axis-label";
+    xLabel.textContent = "X";
+    yLabel.scope = "row";
+    yLabel.className = "axis-label";
+    yLabel.textContent = "Y";
 
+    indexRow.appendChild(indexLabel);
+    xRow.appendChild(xLabel);
+    yRow.appendChild(yLabel);
+
+    table.rows.forEach(function (row, rowIndex) {
+      var indexCell = documentRef.createElement("td");
+      var xCell = documentRef.createElement("td");
+      var yCell = documentRef.createElement("td");
+      var xInput = documentRef.createElement("input");
+      var yInput = documentRef.createElement("input");
+
+      indexCell.className = "point-cell point-number";
       indexCell.textContent = String(rowIndex + 1);
+      xCell.className = "point-cell";
+      yCell.className = "point-cell";
 
       xInput.type = "number";
       xInput.step = "any";
@@ -317,33 +348,33 @@
 
       xCell.appendChild(xInput);
       yCell.appendChild(yInput);
-      tr.append(indexCell, xCell, yCell);
-      body.appendChild(tr);
+      indexRow.appendChild(indexCell);
+      xRow.appendChild(xCell);
+      yRow.appendChild(yCell);
     });
+
+    body.append(indexRow, xRow, yRow);
   }
 
   function startApp(doc) {
     var documentRef = doc || document;
     var state = loadState();
-    var targetInput = documentRef.getElementById("target-x");
+    var allTargetInput = documentRef.getElementById("all-target-x");
+    var applyTargetButton = documentRef.getElementById("apply-target-x");
     var allRowCountInput = documentRef.getElementById("all-row-count");
     var applyRowCountButton = documentRef.getElementById("apply-row-count");
     var resetSampleButton = documentRef.getElementById("reset-sample");
     var clearAllButton = documentRef.getElementById("clear-all");
     var saveStateNode = documentRef.getElementById("save-state");
     var tableGrid = documentRef.getElementById("table-grid");
-    var summaryBody = documentRef.getElementById("summary-body");
     var template = documentRef.getElementById("table-card-template");
     var tableViews = [];
 
     function calculateAll() {
-      var target = targetInput.value;
-      summaryBody.replaceChildren();
-
       state.tables.forEach(function (table, tableIndex) {
         var view = tableViews[tableIndex];
         var result = table.enabled
-          ? calculateLinearInterpolation(table.rows, target)
+          ? calculateLinearInterpolation(table.rows, table.targetX)
           : {
               ok: false,
               level: "warn",
@@ -364,27 +395,10 @@
         view.resultY.textContent = resultText;
         view.resultDetail.textContent = result.message + " | " + result.range;
         view.resultDetail.className = "table-result-detail " + statusClass;
-
-        var summaryRow = documentRef.createElement("tr");
-        var nameCell = documentRef.createElement("td");
-        var yCell = documentRef.createElement("td");
-        var statusCell = documentRef.createElement("td");
-        var rangeCell = documentRef.createElement("td");
-
-        nameCell.textContent = table.name;
-        yCell.textContent = resultText;
-        yCell.className = "result-value";
-        statusCell.textContent = result.message;
-        statusCell.className = statusClass;
-        rangeCell.textContent = result.range;
-
-        summaryRow.append(nameCell, yCell, statusCell, rangeCell);
-        summaryBody.appendChild(summaryRow);
       });
     }
 
     function persistAndCalculate() {
-      state.targetX = targetInput.value;
       saveState(state, saveStateNode);
       calculateAll();
     }
@@ -394,6 +408,7 @@
       var card = fragment.querySelector(".table-card");
       var enabledInput = fragment.querySelector(".table-enabled");
       var nameInput = fragment.querySelector(".table-name");
+      var tableTargetInput = fragment.querySelector(".table-target-x");
       var rowCountInput = fragment.querySelector(".row-count");
       var sampleButton = fragment.querySelector(".sample-table");
       var clearButton = fragment.querySelector(".clear-table");
@@ -403,6 +418,7 @@
 
       enabledInput.checked = table.enabled;
       nameInput.value = table.name;
+      tableTargetInput.value = table.targetX;
       rowCountInput.value = String(table.rows.length);
 
       enabledInput.addEventListener("change", function () {
@@ -412,6 +428,12 @@
 
       nameInput.addEventListener("input", function () {
         table.name = nameInput.value.trim() || "Table " + (tableIndex + 1);
+        persistAndCalculate();
+      });
+
+      tableTargetInput.addEventListener("input", function () {
+        table.targetX = tableTargetInput.value;
+        state.targetX = tableTargetInput.value;
         persistAndCalculate();
       });
 
@@ -439,16 +461,31 @@
 
       tableViews[tableIndex] = {
         card: card,
+        targetXInput: tableTargetInput,
         resultY: resultY,
         resultDetail: resultDetail,
       };
     }
 
-    targetInput.value = state.targetX;
+    allTargetInput.value = state.targetX;
     allRowCountInput.value = String(DEFAULT_ROW_COUNT);
     state.tables.forEach(renderTable);
 
-    targetInput.addEventListener("input", persistAndCalculate);
+    allTargetInput.addEventListener("input", function () {
+      state.targetX = allTargetInput.value;
+      saveState(state, saveStateNode);
+    });
+
+    applyTargetButton.addEventListener("click", function () {
+      state.targetX = allTargetInput.value;
+      state.tables.forEach(function (table, tableIndex) {
+        table.targetX = allTargetInput.value;
+        if (tableViews[tableIndex]) {
+          tableViews[tableIndex].targetXInput.value = allTargetInput.value;
+        }
+      });
+      persistAndCalculate();
+    });
 
     applyRowCountButton.addEventListener("click", function () {
       var nextCount = clampInteger(
@@ -470,7 +507,7 @@
 
     resetSampleButton.addEventListener("click", function () {
       state = makeDefaultState();
-      targetInput.value = state.targetX;
+      allTargetInput.value = state.targetX;
       tableGrid.replaceChildren();
       tableViews = [];
       state.tables.forEach(renderTable);
