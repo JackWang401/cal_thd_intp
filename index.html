@@ -10,7 +10,7 @@
     <main class="app-shell">
       <header class="app-header">
         <div>
-          <p class="eyebrow">v0.3.0</p>
+          <p class="eyebrow">v0.4.0</p>
           <h1>Table Linear Interpolation</h1>
         </div>
         <div class="global-controls" aria-label="Global controls">
@@ -62,6 +62,21 @@
           <table class="breakpoint-table">
             <tbody class="breakpoint-body"></tbody>
           </table>
+        </div>
+        <div class="plot-wrap" aria-label="Table plot">
+          <svg class="table-plot" viewBox="0 0 360 50" role="img" aria-label="X Y line plot">
+            <line class="plot-axis" x1="26" y1="38" x2="342" y2="38"></line>
+            <line class="plot-axis" x1="26" y1="7" x2="26" y2="38"></line>
+            <polyline class="plot-line" points=""></polyline>
+            <line class="plot-input-line" x1="0" y1="7" x2="0" y2="38"></line>
+            <circle class="plot-input-point" cx="0" cy="0" r="3.5"></circle>
+            <g class="plot-point-layer"></g>
+            <text class="plot-empty" x="180" y="29">Need 2 points</text>
+          </svg>
+          <div class="plot-scale">
+            <span class="plot-x-min">--</span>
+            <span class="plot-x-max">--</span>
+          </div>
         </div>
       </article>
     </template>

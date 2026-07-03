@@ -261,6 +261,109 @@
     };
   }
 
+  function getCompleteSortedPoints(rows) {
+    var points = [];
+
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      var x = parseFiniteNumber(row && row.x);
+      var y = parseFiniteNumber(row && row.y);
+      if (x !== null && y !== null) {
+        points.push({
+          x: x,
+          y: y,
+        });
+      }
+    });
+
+    points.sort(function (left, right) {
+      return left.x - right.x;
+    });
+
+    return points;
+  }
+
+  function makeScale(min, max, start, end) {
+    if (min === max) {
+      return function () {
+        return (start + end) / 2;
+      };
+    }
+
+    return function (value) {
+      return start + ((value - min) / (max - min)) * (end - start);
+    };
+  }
+
+  function updatePlot(view, table, result) {
+    var points = getCompleteSortedPoints(table.rows);
+    var plot = view.plot;
+    var pointLayer = view.plotPointLayer;
+    var emptyText = view.plotEmpty;
+    var inputLine = view.plotInputLine;
+    var inputPoint = view.plotInputPoint;
+    var xMinText = view.plotXMin;
+    var xMaxText = view.plotXMax;
+
+    pointLayer.replaceChildren();
+
+    if (points.length < 2) {
+      plot.setAttribute("points", "");
+      emptyText.style.display = "block";
+      inputLine.style.display = "none";
+      inputPoint.style.display = "none";
+      xMinText.textContent = "--";
+      xMaxText.textContent = "--";
+      return;
+    }
+
+    var minX = points[0].x;
+    var maxX = points[points.length - 1].x;
+    var yValues = points.map(function (point) {
+      return point.y;
+    });
+    var minY = Math.min.apply(null, yValues);
+    var maxY = Math.max.apply(null, yValues);
+    var scaleX = makeScale(minX, maxX, 26, 342);
+    var scaleY = makeScale(minY, maxY, 38, 7);
+    var svgDocument = pointLayer.ownerDocument;
+    var polylinePoints = points
+      .map(function (point) {
+        return formatNumber(scaleX(point.x)) + "," + formatNumber(scaleY(point.y));
+      })
+      .join(" ");
+
+    plot.setAttribute("points", polylinePoints);
+    emptyText.style.display = "none";
+    xMinText.textContent = "x " + formatNumber(minX);
+    xMaxText.textContent = "x " + formatNumber(maxX);
+
+    points.forEach(function (point) {
+      var dot = svgDocument.createElementNS("http://www.w3.org/2000/svg", "circle");
+      dot.setAttribute("class", "plot-dot");
+      dot.setAttribute("cx", formatNumber(scaleX(point.x)));
+      dot.setAttribute("cy", formatNumber(scaleY(point.y)));
+      dot.setAttribute("r", "2.6");
+      pointLayer.appendChild(dot);
+    });
+
+    if (result.ok && Number.isFinite(result.y)) {
+      var target = parseFiniteNumber(table.targetX);
+      var clampedTarget = Math.min(maxX, Math.max(minX, target));
+      var inputX = scaleX(clampedTarget);
+      var inputY = scaleY(result.y);
+
+      inputLine.setAttribute("x1", formatNumber(inputX));
+      inputLine.setAttribute("x2", formatNumber(inputX));
+      inputLine.style.display = "block";
+      inputPoint.setAttribute("cx", formatNumber(inputX));
+      inputPoint.setAttribute("cy", formatNumber(inputY));
+      inputPoint.style.display = "block";
+    } else {
+      inputLine.style.display = "none";
+      inputPoint.style.display = "none";
+    }
+  }
+
   function setSaveStatus(statusNode, text, level) {
     if (!statusNode) {
       return;
@@ -458,6 +561,7 @@
         view.resultY.textContent = resultText;
         view.resultDetail.textContent = result.message + " | " + result.range;
         view.resultDetail.className = "table-result-detail " + statusClass;
+        updatePlot(view, table, result);
       });
     }
 
@@ -478,6 +582,13 @@
       var resultY = fragment.querySelector(".table-result-y");
       var resultDetail = fragment.querySelector(".table-result-detail");
       var breakpointBody = fragment.querySelector(".breakpoint-body");
+      var plot = fragment.querySelector(".plot-line");
+      var plotPointLayer = fragment.querySelector(".plot-point-layer");
+      var plotInputLine = fragment.querySelector(".plot-input-line");
+      var plotInputPoint = fragment.querySelector(".plot-input-point");
+      var plotEmpty = fragment.querySelector(".plot-empty");
+      var plotXMin = fragment.querySelector(".plot-x-min");
+      var plotXMax = fragment.querySelector(".plot-x-max");
 
       enabledInput.checked = table.enabled;
       nameInput.value = table.name;
@@ -527,6 +638,13 @@
         targetXInput: tableTargetInput,
         resultY: resultY,
         resultDetail: resultDetail,
+        plot: plot,
+        plotPointLayer: plotPointLayer,
+        plotInputLine: plotInputLine,
+        plotInputPoint: plotInputPoint,
+        plotEmpty: plotEmpty,
+        plotXMin: plotXMin,
+        plotXMax: plotXMax,
       };
     }
 
@@ -616,6 +734,7 @@
     MAX_ROW_COUNT: MAX_ROW_COUNT,
     calculateLinearInterpolation: calculateLinearInterpolation,
     formatNumber: formatNumber,
+    getCompleteSortedPoints: getCompleteSortedPoints,
     makeDefaultState: makeDefaultState,
     normalizeState: normalizeState,
     loadState: loadState,

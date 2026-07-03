@@ -154,7 +154,7 @@ h1 {
 
 .table-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(520px, 1fr));
+  grid-template-columns: repeat(4, minmax(292px, 1fr));
   gap: 8px;
 }
 
@@ -170,7 +170,7 @@ h1 {
 
 .table-card-header {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 82px 90px 58px auto;
+  grid-template-columns: minmax(92px, 1fr) 64px 70px 48px;
   gap: 6px;
   align-items: end;
   border-bottom: 1px solid var(--line);
@@ -216,7 +216,8 @@ h1 {
 .table-card-actions {
   display: flex;
   gap: 5px;
-  justify-content: flex-end;
+  grid-column: 1 / -1;
+  justify-content: flex-start;
 }
 
 .table-card-actions button {
@@ -278,8 +279,8 @@ h1 {
 }
 
 .point-cell {
-  width: 68px;
-  min-width: 68px;
+  width: 54px;
+  min-width: 54px;
 }
 
 .point-number {
@@ -297,11 +298,79 @@ h1 {
   text-align: right;
 }
 
+.plot-wrap {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid var(--line);
+  background: #fbfcfd;
+  padding: 3px 5px 4px;
+}
+
+.table-plot {
+  display: block;
+  width: 100%;
+  height: 50px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.plot-axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.plot-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.plot-dot {
+  fill: #fff;
+  stroke: var(--accent-strong);
+  stroke-width: 1.6;
+}
+
+.plot-input-line {
+  display: none;
+  stroke: var(--warn);
+  stroke-dasharray: 3 3;
+  stroke-width: 1.4;
+}
+
+.plot-input-point {
+  display: none;
+  fill: var(--warn);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.plot-empty {
+  display: none;
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-anchor: middle;
+}
+
+.plot-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
 .table-card.disabled {
   opacity: 0.62;
 }
 
-.table-card.disabled .breakpoint-wrap {
+.table-card.disabled .breakpoint-wrap,
+.table-card.disabled .plot-wrap {
   pointer-events: none;
 }
 
@@ -315,6 +384,12 @@ h1 {
     justify-content: start;
   }
 
+  .table-grid {
+    grid-template-columns: repeat(2, minmax(360px, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
   .table-grid {
     grid-template-columns: 1fr;
   }

@@ -1,5 +1,9 @@
 const assert = require("node:assert/strict");
-const { calculateLinearInterpolation, normalizeState } = require("../app");
+const {
+  calculateLinearInterpolation,
+  getCompleteSortedPoints,
+  normalizeState,
+} = require("../app");
 
 function y(rows, x) {
   const result = calculateLinearInterpolation(rows, x);
@@ -67,5 +71,11 @@ const migratedState = normalizeState({
 assert.equal(migratedState.tables[0].targetX, "12.5");
 assert.equal(migratedState.tables.length, 8);
 assert.equal(migratedState.updatedAt, "2026-07-04T00:00:00.000Z");
+
+assert.deepEqual(getCompleteSortedPoints(unsortedRows), [
+  { x: 0, y: 0 },
+  { x: 10, y: 100 },
+  { x: 20, y: 200 },
+]);
 
 console.log("Interpolation tests passed");
