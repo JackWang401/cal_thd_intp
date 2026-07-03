@@ -1,0 +1,9 @@
+{
+  "name": "cal-thd-intp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static tool for checking linear interpolation across eight x/y tables.",
+  "scripts": {
+    "test": "node tests/interpolation.test.js"
+  }
+}
