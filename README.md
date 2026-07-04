@@ -8,6 +8,7 @@ Static browser tool for checking linear interpolation and comparing four pairs o
 - Each comparison row has two vertically stacked table versions on the left and one shared plot on the right.
 - Each comparison row has one shared table name for both stacked versions.
 - Each table displays breakpoints horizontally, with one `X` row and one `Y` row.
+- Excel-copied X/Y data can be pasted into a breakpoint cell, and the table point count adjusts to the pasted data.
 - One global `All X` field is used for interpolation across every table and version.
 - Each table displays its own `Output Y` result field.
 - Each version has a version-info field used as the plot legend.
@@ -27,8 +28,8 @@ Static browser tool for checking linear interpolation and comparing four pairs o
 Open `index.html` in a browser.
 
 1. Enter the shared interpolation value in the `All X` field.
-2. Edit that table's horizontal `X` and `Y` breakpoint rows.
-3. Adjust each table's `Points` value when that table needs more or fewer breakpoints.
+2. Edit that table's horizontal `X` and `Y` breakpoint rows, or paste copied Excel X/Y data into any breakpoint cell.
+3. Adjust each table's `Points` value manually only when needed; pasted tables resize automatically.
 4. Read the interpolated or clamped value in that table's `Output Y` field.
 5. Edit `All X` to update the interpolation input for all tables and versions.
 6. Use each row's right-side plot to compare the two version curves.

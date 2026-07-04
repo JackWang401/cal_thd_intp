@@ -20,6 +20,9 @@ This document consolidates the user-entered requirements for the table interpola
 - The upper table shall reserve and display its own version-info field.
 - The lower table shall reserve and display its own version-info field.
 - Each table shall support editable X breakpoints and Y values.
+- Each table shall support pasting X/Y data copied from Excel into a breakpoint cell.
+- Pasted Excel data may be arranged as two horizontal rows or as two vertical columns.
+- The table point count shall adjust automatically to the number of pasted X/Y points.
 - The application shall support one editable global input X value for interpolation.
 - Each table shall display a calculated output Y result from the global input X value.
 - Each table shall support a row-specific point count, rather than requiring a global point-count control.
@@ -84,6 +87,7 @@ This document consolidates the user-entered requirements for the table interpola
 ## 8. Global Controls
 
 - The application shall provide an All X input that applies one X value to every table and version as it is edited.
+- The All X input shall be placed with table-oriented controls on the left side of the page, not with plot settings.
 - The application shall not provide an Apply X button.
 - The application shall not provide Sample buttons.
 - The application shall not provide a global Set All Points control.

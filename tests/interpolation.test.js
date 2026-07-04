@@ -4,6 +4,7 @@ const {
   formatOutputValue,
   getCompleteSortedPoints,
   normalizeState,
+  parsePastedTable,
   PAIR_COUNT,
 } = require("../app");
 
@@ -26,6 +27,9 @@ assert.equal(y(rows, "25"), 200);
 assert.equal(formatOutputValue(1 / 3), "0.333");
 assert.equal(formatOutputValue(2), "2.000");
 assert.equal(formatOutputValue(-0), "0.000");
+assert.deepEqual(parsePastedTable("X\t0\t10\t20\nY\t0\t100\t200"), rows);
+assert.deepEqual(parsePastedTable("0\t0\n10\t100\n20\t200"), rows);
+assert.deepEqual(parsePastedTable("X\tY\n0\t0\n10\t100\n20\t200"), rows);
 
 const unsortedRows = [
   { x: "20", y: "200" },

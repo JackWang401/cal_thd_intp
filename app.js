@@ -178,6 +178,92 @@
     });
   }
 
+  function stripExcelLabel(value) {
+    var text = value === undefined || value === null ? "" : String(value).trim();
+    return /^(x|y|#|point|points)$/i.test(text) ? "" : text;
+  }
+
+  function hasClipboardValue(value) {
+    return stripExcelLabel(value) !== "";
+  }
+
+  function parseClipboardRows(text) {
+    if (typeof text !== "string" || text.trim() === "") {
+      return [];
+    }
+
+    return text
+      .replace(/\r/g, "")
+      .split("\n")
+      .map(function (line) {
+        return line.split("\t").map(function (cell) {
+          return cell.trim();
+        });
+      })
+      .filter(function (row) {
+        return row.some(hasClipboardValue);
+      });
+  }
+
+  function parsePastedTable(text) {
+    var clipboardRows = parseClipboardRows(text);
+    var points = [];
+
+    if (clipboardRows.length < 1) {
+      return points;
+    }
+
+    var looksVertical =
+      clipboardRows.length > 2 ||
+      (clipboardRows.length === 2 &&
+        clipboardRows.every(function (row) {
+          return row.filter(hasClipboardValue).length <= 2;
+        }) &&
+        !/^x$/i.test(String(clipboardRows[0][0] || "").trim()) &&
+        !/^y$/i.test(String(clipboardRows[1][0] || "").trim()));
+
+    if (looksVertical) {
+      clipboardRows.some(function (row) {
+        var values = row.map(stripExcelLabel).filter(function (value) {
+          return value !== "";
+        });
+
+        if (values.length >= 2) {
+          points.push({
+            x: values[0],
+            y: values[1],
+          });
+        }
+
+        return points.length >= MAX_ROW_COUNT;
+      });
+
+      return points;
+    }
+
+    if (clipboardRows.length >= 2) {
+      var xValues = clipboardRows[0].map(stripExcelLabel).filter(function (value) {
+        return value !== "";
+      });
+      var yValues = clipboardRows[1].map(stripExcelLabel).filter(function (value) {
+        return value !== "";
+      });
+      var horizontalCount = Math.min(xValues.length, yValues.length, MAX_ROW_COUNT);
+
+      if (horizontalCount > 0) {
+        for (var horizontalIndex = 0; horizontalIndex < horizontalCount; horizontalIndex += 1) {
+          points.push({
+            x: xValues[horizontalIndex],
+            y: yValues[horizontalIndex],
+          });
+        }
+        return points;
+      }
+    }
+
+    return points;
+  }
+
   function normalizeState(candidate) {
     var fallback = makeDefaultState();
     if (!candidate || typeof candidate !== "object") {
@@ -567,7 +653,7 @@
     table.rows = nextRows.length > 0 ? nextRows : makeRows(1, tableIndex, false);
   }
 
-  function renderBreakpointRows(body, table, tableIndex, onChange) {
+  function renderBreakpointRows(body, table, tableIndex, onChange, onPasteRows) {
     var documentRef = body.ownerDocument;
     var indexRow = documentRef.createElement("tr");
     var xRow = documentRef.createElement("tr");
@@ -616,6 +702,7 @@
         row.x = xInput.value;
         onChange();
       });
+      xInput.addEventListener("paste", onPasteRows);
 
       yInput.type = "number";
       yInput.step = "any";
@@ -629,6 +716,7 @@
         row.y = yInput.value;
         onChange();
       });
+      yInput.addEventListener("paste", onPasteRows);
 
       xCell.appendChild(xInput);
       yCell.appendChild(yInput);
@@ -1096,17 +1184,35 @@
       rowCountInput.addEventListener("change", function () {
         setRowCount(table, rowCountInput.value, tableIndex);
         rowCountInput.value = String(table.rows.length);
-        renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate);
+        renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate, handlePasteRows);
         persistAndCalculate();
       });
 
       clearButton.addEventListener("click", function () {
         table.rows = makeRows(table.rows.length, tableIndex, false);
-        renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate);
+        renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate, handlePasteRows);
         persistAndCalculate();
       });
 
-      renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate);
+      function handlePasteRows(event) {
+        var pastedText =
+          event.clipboardData && typeof event.clipboardData.getData === "function"
+            ? event.clipboardData.getData("text")
+            : "";
+        var pastedRows = parsePastedTable(pastedText);
+
+        if (pastedRows.length < 1) {
+          return;
+        }
+
+        event.preventDefault();
+        table.rows = pastedRows;
+        rowCountInput.value = String(table.rows.length);
+        renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate, handlePasteRows);
+        persistAndCalculate();
+      }
+
+      renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate, handlePasteRows);
 
       tableViews[tableIndex] = {
         panel: panel,
@@ -1365,6 +1471,7 @@
     getCompleteSortedPoints: getCompleteSortedPoints,
     makeDefaultState: makeDefaultState,
     normalizeState: normalizeState,
+    parsePastedTable: parsePastedTable,
     loadState: loadState,
   };
 });

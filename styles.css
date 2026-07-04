@@ -114,6 +114,13 @@ h1 {
   align-items: end;
 }
 
+.table-global-controls {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .field,
 .row-stepper,
 .table-value-field {
@@ -265,7 +272,7 @@ h1 {
 
 .version-header {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 82px 56px auto;
+  grid-template-columns: minmax(150px, 260px) minmax(112px, 150px) 64px auto;
   gap: 6px;
   align-items: end;
   border-bottom: 1px solid var(--line);
@@ -292,6 +299,8 @@ h1 {
 .table-version {
   color: var(--text);
   font-weight: 720;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .output-field output {
@@ -584,7 +593,7 @@ h1 {
   }
 
   .version-header {
-    grid-template-columns: minmax(120px, 1fr) 78px 86px;
+    grid-template-columns: minmax(120px, 1fr) 92px 58px;
   }
 
   .row-stepper,
