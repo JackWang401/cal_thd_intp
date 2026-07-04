@@ -3,6 +3,7 @@ const {
   calculateLinearInterpolation,
   getCompleteSortedPoints,
   normalizeState,
+  PAIR_COUNT,
 } = require("../app");
 
 function y(rows, x) {
@@ -61,6 +62,7 @@ const migratedState = normalizeState({
   targetX: "12.5",
   plotWidth: 900,
   plotHeight: 120,
+  splitPercent: 60,
   updatedAt: "2026-07-04T00:00:00.000Z",
   tables: [
     {
@@ -71,10 +73,13 @@ const migratedState = normalizeState({
   ],
 });
 assert.equal(migratedState.tables[0].targetX, "12.5");
+assert.equal(migratedState.tables[0].versionInfo, "Legacy Table");
 assert.equal(migratedState.tables.length, 8);
+assert.equal(PAIR_COUNT, 4);
 assert.equal(migratedState.updatedAt, "2026-07-04T00:00:00.000Z");
 assert.equal(migratedState.plotWidth, 900);
 assert.equal(migratedState.plotHeight, 120);
+assert.equal(migratedState.splitPercent, 60);
 
 assert.deepEqual(getCompleteSortedPoints(unsortedRows), [
   { x: 0, y: 0 },

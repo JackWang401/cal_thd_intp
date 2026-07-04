@@ -9,12 +9,14 @@
   --accent: #146c70;
   --accent-strong: #0f5558;
   --accent-soft: #e8f4f3;
+  --compare: #7a4db3;
   --danger: #b83b35;
   --warn: #875a00;
   --ok: #246b3d;
   --shadow: 0 6px 16px rgba(17, 27, 38, 0.06);
   --plot-width: 720px;
-  --plot-height: 80px;
+  --plot-height: 220px;
+  --split-percent: 54%;
 }
 
 * {
@@ -46,10 +48,6 @@ button {
   cursor: pointer;
   padding: 0 9px;
   white-space: nowrap;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
 }
 
 button:hover {
@@ -160,8 +158,9 @@ h1 {
   gap: 8px;
 }
 
-.table-card {
+.comparison-card {
   display: grid;
+  grid-template-columns: minmax(420px, var(--split-percent)) minmax(300px, 1fr);
   min-width: 0;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -170,13 +169,29 @@ h1 {
   overflow: hidden;
 }
 
-.table-card-header {
+.version-stack {
   display: grid;
-  grid-template-columns: minmax(92px, 1fr) 64px 70px 48px;
+  grid-template-rows: 1fr 1fr;
+  min-width: 0;
+  border-right: 3px solid var(--line-strong);
+}
+
+.version-table {
+  display: grid;
+  min-width: 0;
+}
+
+.version-table + .version-table {
+  border-top: 1px solid var(--line);
+}
+
+.version-header {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 76px 82px 56px auto;
   gap: 6px;
   align-items: end;
   border-bottom: 1px solid var(--line);
-  padding: 6px;
+  padding: 5px 6px;
 }
 
 .table-title {
@@ -193,7 +208,7 @@ h1 {
   padding: 0;
 }
 
-.table-name {
+.table-version {
   font-weight: 720;
 }
 
@@ -218,7 +233,6 @@ h1 {
 .table-card-actions {
   display: flex;
   gap: 5px;
-  grid-column: 1 / -1;
   justify-content: flex-start;
 }
 
@@ -304,18 +318,20 @@ h1 {
   margin: 0;
 }
 
-.plot-wrap {
+.comparison-plot-wrap {
   display: grid;
-  gap: 1px;
-  border-top: 1px solid var(--line);
+  align-content: stretch;
+  gap: 3px;
+  min-width: 0;
   background: #fbfcfd;
-  padding: 3px 5px 4px;
+  padding: 5px 6px 4px;
 }
 
-.table-plot {
+.comparison-plot {
   display: block;
   width: min(100%, var(--plot-width));
   height: var(--plot-height);
+  align-self: stretch;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 5px;
@@ -329,30 +345,54 @@ h1 {
 
 .plot-line {
   fill: none;
-  stroke: var(--accent);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.2;
 }
 
+.plot-line-a,
+.plot-dot-a {
+  stroke: var(--accent);
+}
+
+.plot-line-b,
+.plot-dot-b {
+  stroke: var(--compare);
+}
+
+.legend-a {
+  border-top-color: var(--accent);
+}
+
+.legend-b {
+  border-top-color: var(--compare);
+}
+
 .plot-dot {
   fill: #fff;
-  stroke: var(--accent-strong);
   stroke-width: 1.6;
 }
 
 .plot-input-line {
   display: none;
-  stroke: var(--warn);
   stroke-dasharray: 3 3;
   stroke-width: 1.4;
 }
 
+.plot-input-line-a,
+.plot-input-point-a {
+  stroke: var(--accent);
+}
+
+.plot-input-line-b,
+.plot-input-point-b {
+  stroke: var(--compare);
+}
+
 .plot-input-point {
   display: none;
-  fill: var(--warn);
-  stroke: #fff;
-  stroke-width: 1.5;
+  fill: #fff;
+  stroke-width: 2;
 }
 
 .plot-empty {
@@ -363,21 +403,49 @@ h1 {
   text-anchor: middle;
 }
 
-.plot-scale {
+.plot-footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.plot-scale,
+.plot-legend {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   color: var(--muted);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  min-width: 0;
 }
 
-.table-card.disabled {
+.plot-scale {
+  justify-content: space-between;
+}
+
+.plot-legend span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 16px;
+  border-top-width: 2px;
+  border-top-style: solid;
+}
+
+.version-table.disabled {
   opacity: 0.62;
 }
 
-.table-card.disabled .breakpoint-wrap,
-.table-card.disabled .plot-wrap {
+.version-table.disabled .breakpoint-wrap {
   pointer-events: none;
 }
 
@@ -391,6 +459,14 @@ h1 {
     justify-content: start;
   }
 
+  .comparison-card {
+    grid-template-columns: 1fr;
+  }
+
+  .version-stack {
+    border-right: 0;
+    border-bottom: 3px solid var(--line-strong);
+  }
 }
 
 @media (max-width: 640px) {
@@ -413,16 +489,12 @@ h1 {
     width: 100%;
   }
 
-  .table-card-header {
+  .version-header {
     grid-template-columns: minmax(120px, 1fr) 78px 86px;
   }
 
   .row-stepper,
   .table-card-actions {
     grid-column: span 1;
-  }
-
-  .table-card-actions {
-    justify-content: start;
   }
 }

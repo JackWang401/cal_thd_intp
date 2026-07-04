@@ -10,7 +10,7 @@
     <main class="app-shell">
       <header class="app-header">
         <div>
-          <p class="eyebrow">v0.5.0</p>
+          <p class="eyebrow">v0.6.0</p>
           <h1>Table Linear Interpolation</h1>
         </div>
         <div class="global-controls" aria-label="Global controls">
@@ -25,28 +25,63 @@
           </label>
           <button id="apply-row-count" type="button">Apply Points</button>
           <label class="field compact">
+            <span>Split %</span>
+            <input id="split-percent" type="number" min="35" max="75" step="1">
+          </label>
+          <label class="field compact">
             <span>Plot W</span>
-            <input id="plot-width" type="number" min="240" max="1600" step="20">
+            <input id="plot-width" type="number" min="300" max="1800" step="20">
           </label>
           <label class="field compact">
             <span>Plot H</span>
-            <input id="plot-height" type="number" min="40" max="360" step="10">
+            <input id="plot-height" type="number" min="120" max="520" step="10">
           </label>
           <button id="reset-sample" type="button">Sample</button>
           <button id="clear-all" type="button">Clear</button>
         </div>
       </header>
 
-      <section id="table-grid" class="table-grid" aria-label="Interpolation tables"></section>
+      <section id="table-grid" class="table-grid" aria-label="Interpolation comparison pairs"></section>
       <p id="save-state" class="save-state">Loading saved data</p>
     </main>
 
-    <template id="table-card-template">
-      <article class="table-card">
-        <div class="table-card-header">
+    <template id="comparison-card-template">
+      <article class="comparison-card">
+        <div class="version-stack"></div>
+        <div class="comparison-plot-wrap" aria-label="Comparison plot">
+          <svg class="comparison-plot" viewBox="0 0 720 220" role="img" aria-label="Version comparison line plot">
+            <line class="plot-axis-x" x1="34" y1="190" x2="690" y2="190"></line>
+            <line class="plot-axis-y" x1="34" y1="14" x2="34" y2="190"></line>
+            <polyline class="plot-line plot-line-a" points=""></polyline>
+            <polyline class="plot-line plot-line-b" points=""></polyline>
+            <line class="plot-input-line plot-input-line-a" x1="0" y1="14" x2="0" y2="190"></line>
+            <line class="plot-input-line plot-input-line-b" x1="0" y1="14" x2="0" y2="190"></line>
+            <circle class="plot-input-point plot-input-point-a" cx="0" cy="0" r="3.5"></circle>
+            <circle class="plot-input-point plot-input-point-b" cx="0" cy="0" r="3.5"></circle>
+            <g class="plot-point-layer-a"></g>
+            <g class="plot-point-layer-b"></g>
+            <text class="plot-empty" x="360" y="110">Need 2 points</text>
+          </svg>
+          <div class="plot-footer">
+            <div class="plot-scale">
+              <span class="plot-x-min">--</span>
+              <span class="plot-x-max">--</span>
+            </div>
+            <div class="plot-legend">
+              <span><i class="legend-swatch legend-a"></i><span class="legend-a-text">Version A</span></span>
+              <span><i class="legend-swatch legend-b"></i><span class="legend-b-text">Version B</span></span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <template id="version-table-template">
+      <section class="version-table">
+        <div class="version-header">
           <label class="table-title">
             <input class="table-enabled" type="checkbox">
-            <input class="table-name" type="text" maxlength="32">
+            <input class="table-version" type="text" maxlength="40" aria-label="Version information">
           </label>
           <label class="table-value-field">
             <span>Input X</span>
@@ -71,22 +106,7 @@
             <tbody class="breakpoint-body"></tbody>
           </table>
         </div>
-        <div class="plot-wrap" aria-label="Table plot">
-          <svg class="table-plot" viewBox="0 0 720 80" role="img" aria-label="X Y line plot">
-            <line class="plot-axis-x" x1="30" y1="58" x2="696" y2="58"></line>
-            <line class="plot-axis-y" x1="30" y1="8" x2="30" y2="58"></line>
-            <polyline class="plot-line" points=""></polyline>
-            <line class="plot-input-line" x1="0" y1="8" x2="0" y2="58"></line>
-            <circle class="plot-input-point" cx="0" cy="0" r="3.5"></circle>
-            <g class="plot-point-layer"></g>
-            <text class="plot-empty" x="360" y="42">Need 2 points</text>
-          </svg>
-          <div class="plot-scale">
-            <span class="plot-x-min">--</span>
-            <span class="plot-x-max">--</span>
-          </div>
-        </div>
-      </article>
+      </section>
     </template>
 
     <script src="app.js"></script>

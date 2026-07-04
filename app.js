@@ -10,10 +10,12 @@
   "use strict";
 
   var TABLE_COUNT = 8;
+  var PAIR_COUNT = TABLE_COUNT / 2;
   var DEFAULT_ROW_COUNT = 5;
   var MAX_ROW_COUNT = 64;
   var DEFAULT_PLOT_WIDTH = 720;
-  var DEFAULT_PLOT_HEIGHT = 80;
+  var DEFAULT_PLOT_HEIGHT = 220;
+  var DEFAULT_SPLIT_PERCENT = 54;
   var STORAGE_KEY = "linear-interpolation-tool-state-v1";
 
   function parseFiniteNumber(value) {
@@ -61,14 +63,19 @@
 
     for (var rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
       var xValue = rowIndex * 25;
-      var yValue = (tableIndex + 1) * 10 + rowIndex * (tableIndex + 2) * 3;
+      var yValue = (Math.floor(tableIndex / 2) + 1) * 12 + rowIndex * 5;
+      var versionOffset = tableIndex % 2 === 0 ? 0 : 8 + rowIndex * 2;
       rows.push({
         x: withSample ? String(xValue) : "",
-        y: withSample ? String(yValue) : "",
+        y: withSample ? String(yValue + versionOffset) : "",
       });
     }
 
     return rows;
+  }
+
+  function defaultVersionInfo(tableIndex) {
+    return tableIndex % 2 === 0 ? "Version A" : "Version B";
   }
 
   function makeDefaultState() {
@@ -76,9 +83,11 @@
       targetX: "40",
       plotWidth: DEFAULT_PLOT_WIDTH,
       plotHeight: DEFAULT_PLOT_HEIGHT,
+      splitPercent: DEFAULT_SPLIT_PERCENT,
       tables: Array.from({ length: TABLE_COUNT }, function (_, tableIndex) {
         return {
-          name: "Table " + (tableIndex + 1),
+          name: "Parameter " + (Math.floor(tableIndex / 2) + 1),
+          versionInfo: defaultVersionInfo(tableIndex),
           enabled: true,
           targetX: "40",
           rows: makeRows(DEFAULT_ROW_COUNT, tableIndex, true),
@@ -118,6 +127,12 @@
           table && typeof table.name === "string" && table.name.trim() !== ""
             ? table.name.slice(0, 32)
             : fallbackTable.name,
+        versionInfo:
+          table && typeof table.versionInfo === "string" && table.versionInfo.trim() !== ""
+            ? table.versionInfo.slice(0, 40)
+            : table && typeof table.name === "string" && table.name.trim() !== ""
+              ? table.name.slice(0, 40)
+              : fallbackTable.versionInfo,
         enabled: table && typeof table.enabled === "boolean" ? table.enabled : true,
         targetX:
           table && table.targetX !== undefined && table.targetX !== null
@@ -134,17 +149,13 @@
         candidate.targetX !== undefined && candidate.targetX !== null
           ? String(candidate.targetX)
           : fallback.targetX,
-      plotWidth: clampInteger(
-        candidate.plotWidth,
-        240,
-        1600,
-        fallback.plotWidth,
-      ),
-      plotHeight: clampInteger(
-        candidate.plotHeight,
-        40,
-        360,
-        fallback.plotHeight,
+      plotWidth: clampInteger(candidate.plotWidth, 300, 1800, fallback.plotWidth),
+      plotHeight: clampInteger(candidate.plotHeight, 120, 520, fallback.plotHeight),
+      splitPercent: clampInteger(
+        candidate.splitPercent,
+        35,
+        75,
+        fallback.splitPercent,
       ),
       tables: tables,
       updatedAt:
@@ -310,97 +321,6 @@
     };
   }
 
-  function updatePlot(view, table, result) {
-    var points = getCompleteSortedPoints(table.rows);
-    var plotWidth = Number(view.plotSvg.getAttribute("data-plot-width")) || DEFAULT_PLOT_WIDTH;
-    var plotHeight = Number(view.plotSvg.getAttribute("data-plot-height")) || DEFAULT_PLOT_HEIGHT;
-    var left = 30;
-    var right = Math.max(left + 20, plotWidth - 24);
-    var top = 8;
-    var bottom = Math.max(top + 20, plotHeight - 22);
-    var middleX = (left + right) / 2;
-    var middleY = (top + bottom) / 2;
-    var plot = view.plot;
-    var pointLayer = view.plotPointLayer;
-    var emptyText = view.plotEmpty;
-    var inputLine = view.plotInputLine;
-    var inputPoint = view.plotInputPoint;
-    var xMinText = view.plotXMin;
-    var xMaxText = view.plotXMax;
-
-    pointLayer.replaceChildren();
-    view.plotSvg.setAttribute("viewBox", "0 0 " + plotWidth + " " + plotHeight);
-    view.plotAxisX.setAttribute("x1", String(left));
-    view.plotAxisX.setAttribute("y1", String(bottom));
-    view.plotAxisX.setAttribute("x2", String(right));
-    view.plotAxisX.setAttribute("y2", String(bottom));
-    view.plotAxisY.setAttribute("x1", String(left));
-    view.plotAxisY.setAttribute("y1", String(top));
-    view.plotAxisY.setAttribute("x2", String(left));
-    view.plotAxisY.setAttribute("y2", String(bottom));
-    emptyText.setAttribute("x", String(middleX));
-    emptyText.setAttribute("y", String(middleY));
-
-    if (points.length < 2) {
-      plot.setAttribute("points", "");
-      emptyText.style.display = "block";
-      inputLine.style.display = "none";
-      inputPoint.style.display = "none";
-      xMinText.textContent = "--";
-      xMaxText.textContent = "--";
-      return;
-    }
-
-    var minX = points[0].x;
-    var maxX = points[points.length - 1].x;
-    var yValues = points.map(function (point) {
-      return point.y;
-    });
-    var minY = Math.min.apply(null, yValues);
-    var maxY = Math.max.apply(null, yValues);
-    var scaleX = makeScale(minX, maxX, left, right);
-    var scaleY = makeScale(minY, maxY, bottom, top);
-    var svgDocument = pointLayer.ownerDocument;
-    var polylinePoints = points
-      .map(function (point) {
-        return formatNumber(scaleX(point.x)) + "," + formatNumber(scaleY(point.y));
-      })
-      .join(" ");
-
-    plot.setAttribute("points", polylinePoints);
-    emptyText.style.display = "none";
-    xMinText.textContent = "x " + formatNumber(minX);
-    xMaxText.textContent = "x " + formatNumber(maxX);
-
-    points.forEach(function (point) {
-      var dot = svgDocument.createElementNS("http://www.w3.org/2000/svg", "circle");
-      dot.setAttribute("class", "plot-dot");
-      dot.setAttribute("cx", formatNumber(scaleX(point.x)));
-      dot.setAttribute("cy", formatNumber(scaleY(point.y)));
-      dot.setAttribute("r", "2.6");
-      pointLayer.appendChild(dot);
-    });
-
-    if (result.ok && Number.isFinite(result.y)) {
-      var target = parseFiniteNumber(table.targetX);
-      var clampedTarget = Math.min(maxX, Math.max(minX, target));
-      var inputX = scaleX(clampedTarget);
-      var inputY = scaleY(result.y);
-
-      inputLine.setAttribute("x1", formatNumber(inputX));
-      inputLine.setAttribute("y1", String(top));
-      inputLine.setAttribute("x2", formatNumber(inputX));
-      inputLine.setAttribute("y2", String(bottom));
-      inputLine.style.display = "block";
-      inputPoint.setAttribute("cx", formatNumber(inputX));
-      inputPoint.setAttribute("cy", formatNumber(inputY));
-      inputPoint.style.display = "block";
-    } else {
-      inputLine.style.display = "none";
-      inputPoint.style.display = "none";
-    }
-  }
-
   function setSaveStatus(statusNode, text, level) {
     if (!statusNode) {
       return;
@@ -477,7 +397,7 @@
     }
   }
 
-  function applyPlotSettings(documentRef, state, tableViews) {
+  function applyLayoutSettings(documentRef, state, pairViews) {
     documentRef.documentElement.style.setProperty(
       "--plot-width",
       state.plotWidth + "px",
@@ -486,8 +406,12 @@
       "--plot-height",
       state.plotHeight + "px",
     );
+    documentRef.documentElement.style.setProperty(
+      "--split-percent",
+      state.splitPercent + "%",
+    );
 
-    tableViews.forEach(function (view) {
+    pairViews.forEach(function (view) {
       if (view && view.plotSvg) {
         view.plotSvg.setAttribute("data-plot-width", String(state.plotWidth));
         view.plotSvg.setAttribute("data-plot-height", String(state.plotHeight));
@@ -550,7 +474,10 @@
       xInput.step = "any";
       xInput.inputMode = "decimal";
       xInput.value = row.x;
-      xInput.setAttribute("aria-label", "Table " + (tableIndex + 1) + " row " + (rowIndex + 1) + " X");
+      xInput.setAttribute(
+        "aria-label",
+        "Table " + (tableIndex + 1) + " row " + (rowIndex + 1) + " X",
+      );
       xInput.addEventListener("input", function () {
         row.x = xInput.value;
         onChange();
@@ -560,7 +487,10 @@
       yInput.step = "any";
       yInput.inputMode = "decimal";
       yInput.value = row.y;
-      yInput.setAttribute("aria-label", "Table " + (tableIndex + 1) + " row " + (rowIndex + 1) + " Y");
+      yInput.setAttribute(
+        "aria-label",
+        "Table " + (tableIndex + 1) + " row " + (rowIndex + 1) + " Y",
+      );
       yInput.addEventListener("input", function () {
         row.y = yInput.value;
         onChange();
@@ -576,6 +506,136 @@
     body.append(indexRow, xRow, yRow);
   }
 
+  function linePoints(points, scaleX, scaleY) {
+    return points
+      .map(function (point) {
+        return formatNumber(scaleX(point.x)) + "," + formatNumber(scaleY(point.y));
+      })
+      .join(" ");
+  }
+
+  function drawDots(layer, points, scaleX, scaleY, className) {
+    var svgDocument = layer.ownerDocument;
+    layer.replaceChildren();
+    points.forEach(function (point) {
+      var dot = svgDocument.createElementNS("http://www.w3.org/2000/svg", "circle");
+      dot.setAttribute("class", "plot-dot " + className);
+      dot.setAttribute("cx", formatNumber(scaleX(point.x)));
+      dot.setAttribute("cy", formatNumber(scaleY(point.y)));
+      dot.setAttribute("r", "2.6");
+      layer.appendChild(dot);
+    });
+  }
+
+  function updateInputMarker(line, point, table, result, minX, maxX, scaleX, scaleY, top, bottom) {
+    if (result.ok && Number.isFinite(result.y)) {
+      var target = parseFiniteNumber(table.targetX);
+      var clampedTarget = Math.min(maxX, Math.max(minX, target));
+      var inputX = scaleX(clampedTarget);
+      var inputY = scaleY(result.y);
+
+      line.setAttribute("x1", formatNumber(inputX));
+      line.setAttribute("y1", String(top));
+      line.setAttribute("x2", formatNumber(inputX));
+      line.setAttribute("y2", String(bottom));
+      line.style.display = "block";
+      point.setAttribute("cx", formatNumber(inputX));
+      point.setAttribute("cy", formatNumber(inputY));
+      point.style.display = "block";
+    } else {
+      line.style.display = "none";
+      point.style.display = "none";
+    }
+  }
+
+  function updateComparisonPlot(view, tableA, resultA, tableB, resultB) {
+    var pointsA = tableA.enabled ? getCompleteSortedPoints(tableA.rows) : [];
+    var pointsB = tableB.enabled ? getCompleteSortedPoints(tableB.rows) : [];
+    var combined = pointsA.concat(pointsB);
+    var plotWidth = Number(view.plotSvg.getAttribute("data-plot-width")) || DEFAULT_PLOT_WIDTH;
+    var plotHeight = Number(view.plotSvg.getAttribute("data-plot-height")) || DEFAULT_PLOT_HEIGHT;
+    var left = 34;
+    var right = Math.max(left + 20, plotWidth - 30);
+    var top = 14;
+    var bottom = Math.max(top + 20, plotHeight - 30);
+    var middleX = (left + right) / 2;
+    var middleY = (top + bottom) / 2;
+
+    view.plotSvg.setAttribute("viewBox", "0 0 " + plotWidth + " " + plotHeight);
+    view.axisX.setAttribute("x1", String(left));
+    view.axisX.setAttribute("y1", String(bottom));
+    view.axisX.setAttribute("x2", String(right));
+    view.axisX.setAttribute("y2", String(bottom));
+    view.axisY.setAttribute("x1", String(left));
+    view.axisY.setAttribute("y1", String(top));
+    view.axisY.setAttribute("x2", String(left));
+    view.axisY.setAttribute("y2", String(bottom));
+    view.emptyText.setAttribute("x", String(middleX));
+    view.emptyText.setAttribute("y", String(middleY));
+    view.legendA.textContent = tableA.versionInfo || defaultVersionInfo(0);
+    view.legendB.textContent = tableB.versionInfo || defaultVersionInfo(1);
+
+    if (combined.length < 2 || (pointsA.length < 2 && pointsB.length < 2)) {
+      view.lineA.setAttribute("points", "");
+      view.lineB.setAttribute("points", "");
+      view.emptyText.style.display = "block";
+      view.layerA.replaceChildren();
+      view.layerB.replaceChildren();
+      view.inputLineA.style.display = "none";
+      view.inputLineB.style.display = "none";
+      view.inputPointA.style.display = "none";
+      view.inputPointB.style.display = "none";
+      view.xMin.textContent = "--";
+      view.xMax.textContent = "--";
+      return;
+    }
+
+    var xValues = combined.map(function (point) {
+      return point.x;
+    });
+    var yValues = combined.map(function (point) {
+      return point.y;
+    });
+    var minX = Math.min.apply(null, xValues);
+    var maxX = Math.max.apply(null, xValues);
+    var minY = Math.min.apply(null, yValues);
+    var maxY = Math.max.apply(null, yValues);
+    var scaleX = makeScale(minX, maxX, left, right);
+    var scaleY = makeScale(minY, maxY, bottom, top);
+
+    view.emptyText.style.display = "none";
+    view.lineA.setAttribute("points", pointsA.length >= 2 ? linePoints(pointsA, scaleX, scaleY) : "");
+    view.lineB.setAttribute("points", pointsB.length >= 2 ? linePoints(pointsB, scaleX, scaleY) : "");
+    drawDots(view.layerA, pointsA, scaleX, scaleY, "plot-dot-a");
+    drawDots(view.layerB, pointsB, scaleX, scaleY, "plot-dot-b");
+    view.xMin.textContent = "x " + formatNumber(minX);
+    view.xMax.textContent = "x " + formatNumber(maxX);
+    updateInputMarker(
+      view.inputLineA,
+      view.inputPointA,
+      tableA,
+      resultA,
+      minX,
+      maxX,
+      scaleX,
+      scaleY,
+      top,
+      bottom,
+    );
+    updateInputMarker(
+      view.inputLineB,
+      view.inputPointB,
+      tableB,
+      resultB,
+      minX,
+      maxX,
+      scaleX,
+      scaleY,
+      top,
+      bottom,
+    );
+  }
+
   function startApp(doc) {
     var documentRef = doc || document;
     var savedState = readSavedState();
@@ -584,19 +644,37 @@
     var applyTargetButton = documentRef.getElementById("apply-target-x");
     var allRowCountInput = documentRef.getElementById("all-row-count");
     var applyRowCountButton = documentRef.getElementById("apply-row-count");
+    var splitPercentInput = documentRef.getElementById("split-percent");
     var plotWidthInput = documentRef.getElementById("plot-width");
     var plotHeightInput = documentRef.getElementById("plot-height");
     var resetSampleButton = documentRef.getElementById("reset-sample");
     var clearAllButton = documentRef.getElementById("clear-all");
     var saveStateNode = documentRef.getElementById("save-state");
     var tableGrid = documentRef.getElementById("table-grid");
-    var template = documentRef.getElementById("table-card-template");
+    var comparisonTemplate = documentRef.getElementById("comparison-card-template");
+    var versionTemplate = documentRef.getElementById("version-table-template");
     var tableViews = [];
+    var pairViews = [];
+
+    function updateTableView(table, tableIndex, result) {
+      var view = tableViews[tableIndex];
+      var resultText = result.ok ? formatNumber(result.y) : "--";
+      var statusClass =
+        result.level === "ok"
+          ? "status-ok"
+          : result.level === "warn"
+            ? "status-warn"
+            : "status-error";
+
+      view.panel.classList.toggle("disabled", !table.enabled);
+      view.resultY.textContent = resultText;
+      view.resultDetail.textContent = result.message + " | " + result.range;
+      view.resultDetail.className = "table-result-detail " + statusClass;
+    }
 
     function calculateAll() {
-      state.tables.forEach(function (table, tableIndex) {
-        var view = tableViews[tableIndex];
-        var result = table.enabled
+      var results = state.tables.map(function (table) {
+        return table.enabled
           ? calculateLinearInterpolation(table.rows, table.targetX)
           : {
               ok: false,
@@ -605,20 +683,21 @@
               message: "Disabled",
               range: "--",
             };
+      });
 
-        var resultText = result.ok ? formatNumber(result.y) : "--";
-        var statusClass =
-          result.level === "ok"
-            ? "status-ok"
-            : result.level === "warn"
-              ? "status-warn"
-              : "status-error";
+      state.tables.forEach(function (table, tableIndex) {
+        updateTableView(table, tableIndex, results[tableIndex]);
+      });
 
-        view.card.classList.toggle("disabled", !table.enabled);
-        view.resultY.textContent = resultText;
-        view.resultDetail.textContent = result.message + " | " + result.range;
-        view.resultDetail.className = "table-result-detail " + statusClass;
-        updatePlot(view, table, result);
+      pairViews.forEach(function (view, pairIndex) {
+        var tableIndex = pairIndex * 2;
+        updateComparisonPlot(
+          view,
+          state.tables[tableIndex],
+          results[tableIndex],
+          state.tables[tableIndex + 1],
+          results[tableIndex + 1],
+        );
       });
     }
 
@@ -627,11 +706,11 @@
       calculateAll();
     }
 
-    function renderTable(table, tableIndex) {
-      var fragment = template.content.cloneNode(true);
-      var card = fragment.querySelector(".table-card");
+    function renderVersionTable(table, tableIndex, pairView) {
+      var fragment = versionTemplate.content.cloneNode(true);
+      var panel = fragment.querySelector(".version-table");
       var enabledInput = fragment.querySelector(".table-enabled");
-      var nameInput = fragment.querySelector(".table-name");
+      var versionInput = fragment.querySelector(".table-version");
       var tableTargetInput = fragment.querySelector(".table-target-x");
       var rowCountInput = fragment.querySelector(".row-count");
       var sampleButton = fragment.querySelector(".sample-table");
@@ -639,19 +718,9 @@
       var resultY = fragment.querySelector(".table-result-y");
       var resultDetail = fragment.querySelector(".table-result-detail");
       var breakpointBody = fragment.querySelector(".breakpoint-body");
-      var plotSvg = fragment.querySelector(".table-plot");
-      var plotAxisX = fragment.querySelector(".plot-axis-x");
-      var plotAxisY = fragment.querySelector(".plot-axis-y");
-      var plot = fragment.querySelector(".plot-line");
-      var plotPointLayer = fragment.querySelector(".plot-point-layer");
-      var plotInputLine = fragment.querySelector(".plot-input-line");
-      var plotInputPoint = fragment.querySelector(".plot-input-point");
-      var plotEmpty = fragment.querySelector(".plot-empty");
-      var plotXMin = fragment.querySelector(".plot-x-min");
-      var plotXMax = fragment.querySelector(".plot-x-max");
 
       enabledInput.checked = table.enabled;
-      nameInput.value = table.name;
+      versionInput.value = table.versionInfo;
       tableTargetInput.value = table.targetX;
       rowCountInput.value = String(table.rows.length);
 
@@ -660,8 +729,10 @@
         persistAndCalculate();
       });
 
-      nameInput.addEventListener("input", function () {
-        table.name = nameInput.value.trim() || "Table " + (tableIndex + 1);
+      versionInput.addEventListener("input", function () {
+        table.versionInfo = versionInput.value.trim() || defaultVersionInfo(tableIndex);
+        pairView.legendA.textContent = state.tables[Math.floor(tableIndex / 2) * 2].versionInfo;
+        pairView.legendB.textContent = state.tables[Math.floor(tableIndex / 2) * 2 + 1].versionInfo;
         persistAndCalculate();
       });
 
@@ -691,32 +762,64 @@
       });
 
       renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate);
-      tableGrid.appendChild(fragment);
 
       tableViews[tableIndex] = {
-        card: card,
+        panel: panel,
         targetXInput: tableTargetInput,
         resultY: resultY,
         resultDetail: resultDetail,
-        plotSvg: plotSvg,
-        plotAxisX: plotAxisX,
-        plotAxisY: plotAxisY,
-        plot: plot,
-        plotPointLayer: plotPointLayer,
-        plotInputLine: plotInputLine,
-        plotInputPoint: plotInputPoint,
-        plotEmpty: plotEmpty,
-        plotXMin: plotXMin,
-        plotXMax: plotXMax,
       };
+
+      return fragment;
+    }
+
+    function renderPair(pairIndex) {
+      var fragment = comparisonTemplate.content.cloneNode(true);
+      var card = fragment.querySelector(".comparison-card");
+      var stack = fragment.querySelector(".version-stack");
+      var pairView = {
+        card: card,
+        plotSvg: fragment.querySelector(".comparison-plot"),
+        axisX: fragment.querySelector(".plot-axis-x"),
+        axisY: fragment.querySelector(".plot-axis-y"),
+        lineA: fragment.querySelector(".plot-line-a"),
+        lineB: fragment.querySelector(".plot-line-b"),
+        inputLineA: fragment.querySelector(".plot-input-line-a"),
+        inputLineB: fragment.querySelector(".plot-input-line-b"),
+        inputPointA: fragment.querySelector(".plot-input-point-a"),
+        inputPointB: fragment.querySelector(".plot-input-point-b"),
+        layerA: fragment.querySelector(".plot-point-layer-a"),
+        layerB: fragment.querySelector(".plot-point-layer-b"),
+        emptyText: fragment.querySelector(".plot-empty"),
+        xMin: fragment.querySelector(".plot-x-min"),
+        xMax: fragment.querySelector(".plot-x-max"),
+        legendA: fragment.querySelector(".legend-a-text"),
+        legendB: fragment.querySelector(".legend-b-text"),
+      };
+      var tableIndex = pairIndex * 2;
+
+      pairViews[pairIndex] = pairView;
+      stack.appendChild(renderVersionTable(state.tables[tableIndex], tableIndex, pairView));
+      stack.appendChild(renderVersionTable(state.tables[tableIndex + 1], tableIndex + 1, pairView));
+      tableGrid.appendChild(fragment);
+    }
+
+    function renderAllPairs() {
+      tableGrid.replaceChildren();
+      tableViews = [];
+      pairViews = [];
+      for (var pairIndex = 0; pairIndex < PAIR_COUNT; pairIndex += 1) {
+        renderPair(pairIndex);
+      }
+      applyLayoutSettings(documentRef, state, pairViews);
     }
 
     allTargetInput.value = state.targetX;
     allRowCountInput.value = String(DEFAULT_ROW_COUNT);
+    splitPercentInput.value = String(state.splitPercent);
     plotWidthInput.value = String(state.plotWidth);
     plotHeightInput.value = String(state.plotHeight);
-    state.tables.forEach(renderTable);
-    applyPlotSettings(documentRef, state, tableViews);
+    renderAllPairs();
 
     if (savedState.error) {
       setSaveStatus(saveStateNode, "Using defaults; local save unavailable", "error");
@@ -760,57 +863,75 @@
         setRowCount(table, nextCount, tableIndex);
       });
 
-      tableGrid.replaceChildren();
-      tableViews = [];
-      state.tables.forEach(renderTable);
-      applyPlotSettings(documentRef, state, tableViews);
+      renderAllPairs();
       persistAndCalculate();
     });
 
-    function updatePlotWidth(commit) {
-      var nextWidth = Number.parseInt(plotWidthInput.value, 10);
-      if (!Number.isFinite(nextWidth)) {
+    function updateNumberControl(input, currentValue, min, max, fallback, commit) {
+      var nextValue = Number.parseInt(input.value, 10);
+      if (!Number.isFinite(nextValue)) {
         if (commit) {
-          plotWidthInput.value = String(state.plotWidth);
+          input.value = String(currentValue);
         }
-        return;
+        return currentValue;
       }
 
-      if (nextWidth < 240 || nextWidth > 1600) {
+      if (nextValue < min || nextValue > max) {
         if (!commit) {
-          return;
+          return currentValue;
         }
-        nextWidth = clampInteger(nextWidth, 240, 1600, DEFAULT_PLOT_WIDTH);
-        plotWidthInput.value = String(nextWidth);
+        nextValue = clampInteger(nextValue, min, max, fallback);
+        input.value = String(nextValue);
       }
 
-      state.plotWidth = nextWidth;
-      applyPlotSettings(documentRef, state, tableViews);
+      return nextValue;
+    }
+
+    function updateSplit(commit) {
+      state.splitPercent = updateNumberControl(
+        splitPercentInput,
+        state.splitPercent,
+        35,
+        75,
+        DEFAULT_SPLIT_PERCENT,
+        commit,
+      );
+      applyLayoutSettings(documentRef, state, pairViews);
+      persistAndCalculate();
+    }
+
+    function updatePlotWidth(commit) {
+      state.plotWidth = updateNumberControl(
+        plotWidthInput,
+        state.plotWidth,
+        300,
+        1800,
+        DEFAULT_PLOT_WIDTH,
+        commit,
+      );
+      applyLayoutSettings(documentRef, state, pairViews);
       persistAndCalculate();
     }
 
     function updatePlotHeight(commit) {
-      var nextHeight = Number.parseInt(plotHeightInput.value, 10);
-      if (!Number.isFinite(nextHeight)) {
-        if (commit) {
-          plotHeightInput.value = String(state.plotHeight);
-        }
-        return;
-      }
-
-      if (nextHeight < 40 || nextHeight > 360) {
-        if (!commit) {
-          return;
-        }
-        nextHeight = clampInteger(nextHeight, 40, 360, DEFAULT_PLOT_HEIGHT);
-        plotHeightInput.value = String(nextHeight);
-      }
-
-      state.plotHeight = nextHeight;
-      applyPlotSettings(documentRef, state, tableViews);
+      state.plotHeight = updateNumberControl(
+        plotHeightInput,
+        state.plotHeight,
+        120,
+        520,
+        DEFAULT_PLOT_HEIGHT,
+        commit,
+      );
+      applyLayoutSettings(documentRef, state, pairViews);
       persistAndCalculate();
     }
 
+    splitPercentInput.addEventListener("input", function () {
+      updateSplit(false);
+    });
+    splitPercentInput.addEventListener("change", function () {
+      updateSplit(true);
+    });
     plotWidthInput.addEventListener("input", function () {
       updatePlotWidth(false);
     });
@@ -827,12 +948,10 @@
     resetSampleButton.addEventListener("click", function () {
       state = makeDefaultState();
       allTargetInput.value = state.targetX;
+      splitPercentInput.value = String(state.splitPercent);
       plotWidthInput.value = String(state.plotWidth);
       plotHeightInput.value = String(state.plotHeight);
-      tableGrid.replaceChildren();
-      tableViews = [];
-      state.tables.forEach(renderTable);
-      applyPlotSettings(documentRef, state, tableViews);
+      renderAllPairs();
       persistAndCalculate();
     });
 
@@ -840,10 +959,7 @@
       state.tables.forEach(function (table, tableIndex) {
         table.rows = makeRows(table.rows.length, tableIndex, false);
       });
-      tableGrid.replaceChildren();
-      tableViews = [];
-      state.tables.forEach(renderTable);
-      applyPlotSettings(documentRef, state, tableViews);
+      renderAllPairs();
       persistAndCalculate();
     });
 
@@ -858,10 +974,12 @@
 
   return {
     TABLE_COUNT: TABLE_COUNT,
+    PAIR_COUNT: PAIR_COUNT,
     DEFAULT_ROW_COUNT: DEFAULT_ROW_COUNT,
     MAX_ROW_COUNT: MAX_ROW_COUNT,
     DEFAULT_PLOT_WIDTH: DEFAULT_PLOT_WIDTH,
     DEFAULT_PLOT_HEIGHT: DEFAULT_PLOT_HEIGHT,
+    DEFAULT_SPLIT_PERCENT: DEFAULT_SPLIT_PERCENT,
     calculateLinearInterpolation: calculateLinearInterpolation,
     formatNumber: formatNumber,
     getCompleteSortedPoints: getCompleteSortedPoints,
