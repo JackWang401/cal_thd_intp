@@ -48,6 +48,18 @@
     return Number(value.toPrecision(12)).toString();
   }
 
+  function formatOutputValue(value) {
+    if (!Number.isFinite(value)) {
+      return "--";
+    }
+
+    if (Object.is(value, -0)) {
+      return "0.000";
+    }
+
+    return value.toFixed(3);
+  }
+
   function clampInteger(value, min, max, fallback) {
     var parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) {
@@ -78,18 +90,75 @@
     return tableIndex % 2 === 0 ? "Version A" : "Version B";
   }
 
+  function defaultTableName(pairIndex) {
+    return "Parameter " + (pairIndex + 1);
+  }
+
+  function defaultPlotSettings() {
+    return {
+      width: DEFAULT_PLOT_WIDTH,
+      height: DEFAULT_PLOT_HEIGHT,
+      xAxisLabel: "X",
+      yAxisLabel: "Y",
+      xMin: "",
+      xMax: "",
+      yMin: "",
+      yMax: "",
+    };
+  }
+
+  function normalizePlotSettings(settings, fallback) {
+    var fallbackSettings = fallback || defaultPlotSettings();
+    return {
+      width: clampInteger(settings && settings.width, 300, 1800, fallbackSettings.width),
+      height: clampInteger(settings && settings.height, 120, 520, fallbackSettings.height),
+      xAxisLabel:
+        settings && settings.xAxisLabel !== undefined && settings.xAxisLabel !== null
+          ? String(settings.xAxisLabel).slice(0, 18)
+          : fallbackSettings.xAxisLabel,
+      yAxisLabel:
+        settings && settings.yAxisLabel !== undefined && settings.yAxisLabel !== null
+          ? String(settings.yAxisLabel).slice(0, 18)
+          : fallbackSettings.yAxisLabel,
+      xMin:
+        settings && settings.xMin !== undefined && settings.xMin !== null
+          ? String(settings.xMin).slice(0, 24)
+          : fallbackSettings.xMin,
+      xMax:
+        settings && settings.xMax !== undefined && settings.xMax !== null
+          ? String(settings.xMax).slice(0, 24)
+          : fallbackSettings.xMax,
+      yMin:
+        settings && settings.yMin !== undefined && settings.yMin !== null
+          ? String(settings.yMin).slice(0, 24)
+          : fallbackSettings.yMin,
+      yMax:
+        settings && settings.yMax !== undefined && settings.yMax !== null
+          ? String(settings.yMax).slice(0, 24)
+          : fallbackSettings.yMax,
+    };
+  }
+
   function makeDefaultState() {
     return {
       targetX: "40",
       plotWidth: DEFAULT_PLOT_WIDTH,
       plotHeight: DEFAULT_PLOT_HEIGHT,
+      xAxisLabel: "X",
+      yAxisLabel: "Y",
       splitPercent: DEFAULT_SPLIT_PERCENT,
+      pairSplits: Array.from({ length: PAIR_COUNT }, function () {
+        return DEFAULT_SPLIT_PERCENT;
+      }),
+      plotSettings: Array.from({ length: PAIR_COUNT }, function () {
+        return defaultPlotSettings();
+      }),
       tables: Array.from({ length: TABLE_COUNT }, function (_, tableIndex) {
+        var pairIndex = Math.floor(tableIndex / 2);
         return {
-          name: "Parameter " + (Math.floor(tableIndex / 2) + 1),
+          name: defaultTableName(pairIndex),
           versionInfo: defaultVersionInfo(tableIndex),
           enabled: true,
-          targetX: "40",
           rows: makeRows(DEFAULT_ROW_COUNT, tableIndex, true),
         };
       }),
@@ -130,33 +199,88 @@
         versionInfo:
           table && typeof table.versionInfo === "string" && table.versionInfo.trim() !== ""
             ? table.versionInfo.slice(0, 40)
-            : table && typeof table.name === "string" && table.name.trim() !== ""
-              ? table.name.slice(0, 40)
-              : fallbackTable.versionInfo,
+            : fallbackTable.versionInfo,
         enabled: table && typeof table.enabled === "boolean" ? table.enabled : true,
-        targetX:
-          table && table.targetX !== undefined && table.targetX !== null
-            ? String(table.targetX)
-            : candidate.targetX !== undefined && candidate.targetX !== null
-              ? String(candidate.targetX)
-              : fallback.targetX,
         rows: normalizedRows.length > 0 ? normalizedRows : makeRows(1, tableIndex, false),
       };
+    });
+    var firstTableTarget =
+      Array.isArray(candidate.tables) &&
+      candidate.tables[0] &&
+      candidate.tables[0].targetX !== undefined &&
+      candidate.tables[0].targetX !== null
+        ? String(candidate.tables[0].targetX)
+        : null;
+
+    for (var pairIndex = 0; pairIndex < PAIR_COUNT; pairIndex += 1) {
+      var firstIndex = pairIndex * 2;
+      var secondIndex = firstIndex + 1;
+      var firstCandidate = Array.isArray(candidate.tables)
+        ? candidate.tables[firstIndex]
+        : null;
+      var secondCandidate = Array.isArray(candidate.tables)
+        ? candidate.tables[secondIndex]
+        : null;
+      var sharedName =
+        firstCandidate &&
+        typeof firstCandidate.name === "string" &&
+        firstCandidate.name.trim() !== ""
+          ? firstCandidate.name.slice(0, 32)
+          : secondCandidate &&
+              typeof secondCandidate.name === "string" &&
+              secondCandidate.name.trim() !== ""
+            ? secondCandidate.name.slice(0, 32)
+            : defaultTableName(pairIndex);
+
+      tables[firstIndex].name = sharedName;
+      tables[secondIndex].name = sharedName;
+    }
+
+    var fallbackPlotSettings = normalizePlotSettings({
+      width: candidate.plotWidth,
+      height: candidate.plotHeight,
+      xAxisLabel: candidate.xAxisLabel,
+      yAxisLabel: candidate.yAxisLabel,
     });
 
     return {
       targetX:
         candidate.targetX !== undefined && candidate.targetX !== null
           ? String(candidate.targetX)
-          : fallback.targetX,
+          : firstTableTarget || fallback.targetX,
       plotWidth: clampInteger(candidate.plotWidth, 300, 1800, fallback.plotWidth),
       plotHeight: clampInteger(candidate.plotHeight, 120, 520, fallback.plotHeight),
+      xAxisLabel:
+        candidate.xAxisLabel !== undefined && candidate.xAxisLabel !== null
+          ? String(candidate.xAxisLabel).slice(0, 18)
+          : fallback.xAxisLabel,
+      yAxisLabel:
+        candidate.yAxisLabel !== undefined && candidate.yAxisLabel !== null
+          ? String(candidate.yAxisLabel).slice(0, 18)
+          : fallback.yAxisLabel,
       splitPercent: clampInteger(
         candidate.splitPercent,
         35,
         75,
         fallback.splitPercent,
       ),
+      pairSplits: Array.from({ length: PAIR_COUNT }, function (_, pairIndex) {
+        var savedSplit = Array.isArray(candidate.pairSplits)
+          ? candidate.pairSplits[pairIndex]
+          : null;
+        return clampInteger(
+          savedSplit,
+          35,
+          75,
+          clampInteger(candidate.splitPercent, 35, 75, fallback.splitPercent),
+        );
+      }),
+      plotSettings: Array.from({ length: PAIR_COUNT }, function (_, pairIndex) {
+        var savedSettings = Array.isArray(candidate.plotSettings)
+          ? candidate.plotSettings[pairIndex]
+          : null;
+        return normalizePlotSettings(savedSettings, fallbackPlotSettings);
+      }),
       tables: tables,
       updatedAt:
         candidate.updatedAt !== undefined && candidate.updatedAt !== null
@@ -321,6 +445,20 @@
     };
   }
 
+  function readManualRange(minInput, maxInput) {
+    var minValue = parseFiniteNumber(minInput);
+    var maxValue = parseFiniteNumber(maxInput);
+
+    if (minValue === null || maxValue === null || minValue >= maxValue) {
+      return null;
+    }
+
+    return {
+      min: minValue,
+      max: maxValue,
+    };
+  }
+
   function setSaveStatus(statusNode, text, level) {
     if (!statusNode) {
       return;
@@ -398,23 +536,19 @@
   }
 
   function applyLayoutSettings(documentRef, state, pairViews) {
-    documentRef.documentElement.style.setProperty(
-      "--plot-width",
-      state.plotWidth + "px",
-    );
-    documentRef.documentElement.style.setProperty(
-      "--plot-height",
-      state.plotHeight + "px",
-    );
-    documentRef.documentElement.style.setProperty(
-      "--split-percent",
-      state.splitPercent + "%",
-    );
-
-    pairViews.forEach(function (view) {
+    pairViews.forEach(function (view, pairIndex) {
+      var plotSettings = state.plotSettings[pairIndex] || defaultPlotSettings();
       if (view && view.plotSvg) {
-        view.plotSvg.setAttribute("data-plot-width", String(state.plotWidth));
-        view.plotSvg.setAttribute("data-plot-height", String(state.plotHeight));
+        view.plotSvg.setAttribute("data-plot-width", String(plotSettings.width));
+        view.plotSvg.setAttribute("data-plot-height", String(plotSettings.height));
+        view.plotSvg.style.setProperty("--plot-width", plotSettings.width + "px");
+        view.plotSvg.style.setProperty("--plot-height", plotSettings.height + "px");
+      }
+      if (view && view.card) {
+        view.card.style.setProperty(
+          "--pair-split-percent",
+          (state.pairSplits[pairIndex] || DEFAULT_SPLIT_PERCENT) + "%",
+        );
       }
     });
   }
@@ -527,9 +661,140 @@
     });
   }
 
-  function updateInputMarker(line, point, table, result, minX, maxX, scaleX, scaleY, top, bottom) {
+  function clearChildren(node) {
+    if (node) {
+      node.replaceChildren();
+    }
+  }
+
+  function tickValues(min, max, count) {
+    var ticks = [];
+    var tickCount = Math.max(2, count);
+
+    if (min === max) {
+      return [min];
+    }
+
+    for (var tickIndex = 0; tickIndex < tickCount; tickIndex += 1) {
+      ticks.push(min + ((max - min) * tickIndex) / (tickCount - 1));
+    }
+
+    return ticks;
+  }
+
+  function appendSvgText(group, className, x, y, text, anchor) {
+    var textNode = group.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "text");
+    textNode.setAttribute("class", className);
+    textNode.setAttribute("x", formatNumber(x));
+    textNode.setAttribute("y", formatNumber(y));
+    if (anchor) {
+      textNode.setAttribute("text-anchor", anchor);
+    }
+    textNode.textContent = text;
+    group.appendChild(textNode);
+    return textNode;
+  }
+
+  function appendSvgLine(group, className, x1, y1, x2, y2) {
+    var line = group.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("class", className);
+    line.setAttribute("x1", formatNumber(x1));
+    line.setAttribute("y1", formatNumber(y1));
+    line.setAttribute("x2", formatNumber(x2));
+    line.setAttribute("y2", formatNumber(y2));
+    group.appendChild(line);
+    return line;
+  }
+
+  function drawTicks(view, minX, maxX, minY, maxY, scaleX, scaleY, bounds) {
+    clearChildren(view.xTicks);
+    clearChildren(view.yTicks);
+
+    tickValues(minX, maxX, 5).forEach(function (value) {
+      var x = scaleX(value);
+      appendSvgLine(view.xTicks, "plot-tick-line", x, bounds.bottom, x, bounds.bottom + 4);
+      appendSvgText(
+        view.xTicks,
+        "plot-tick-text",
+        x,
+        bounds.bottom + 14,
+        formatNumber(value),
+        "middle",
+      );
+    });
+
+    tickValues(minY, maxY, 5).forEach(function (value) {
+      var y = scaleY(value);
+      appendSvgLine(view.yTicks, "plot-tick-line", bounds.left - 4, y, bounds.left, y);
+      appendSvgText(
+        view.yTicks,
+        "plot-tick-text",
+        bounds.left - 7,
+        y + 3,
+        formatNumber(value),
+        "end",
+      );
+    });
+  }
+
+  function truncateLabel(value, maxLength) {
+    var text = value || "";
+    if (text.length <= maxLength) {
+      return text;
+    }
+
+    return text.slice(0, Math.max(1, maxLength - 1)) + "...";
+  }
+
+  function updatePlotText(view, tableA, tableB, plotWidth, plotHeight, bounds, xAxisLabel, yAxisLabel) {
+    var title = truncateLabel(tableA.name || defaultTableName(0), 30);
+    var legendA = truncateLabel(tableA.versionInfo || defaultVersionInfo(0), 18);
+    var legendB = truncateLabel(tableB.versionInfo || defaultVersionInfo(1), 18);
+    var legendBWidth = legendB.length * 6.2;
+    var legendAWidth = legendA.length * 6.2;
+    var legendAY = 18;
+    var legendBY = 34;
+    var legendBTextX = plotWidth - legendBWidth - 12;
+    var legendBLineX2 = legendBTextX - 7;
+    var legendBLineX1 = legendBLineX2 - 24;
+    var legendATextX = plotWidth - legendAWidth - 12;
+    var legendALineX2 = legendATextX - 7;
+    var legendALineX1 = legendALineX2 - 24;
+    var middleX = (bounds.left + bounds.right) / 2;
+    var middleY = (bounds.top + bounds.bottom) / 2;
+
+    view.plotTitle.setAttribute("x", formatNumber(middleX));
+    view.plotTitle.setAttribute("y", "18");
+    view.plotTitle.setAttribute("text-anchor", "middle");
+    view.plotTitle.textContent = title;
+    view.xLabel.setAttribute("x", formatNumber(middleX));
+    view.xLabel.setAttribute("y", String(plotHeight - 6));
+    view.xLabel.textContent = xAxisLabel || "X";
+    view.yLabel.setAttribute("x", "12");
+    view.yLabel.setAttribute("y", formatNumber(middleY));
+    view.yLabel.setAttribute("transform", "rotate(-90 12 " + formatNumber(middleY) + ")");
+    view.yLabel.textContent = yAxisLabel || "Y";
+
+    view.legendALine.setAttribute("x1", formatNumber(legendALineX1));
+    view.legendALine.setAttribute("x2", formatNumber(legendALineX2));
+    view.legendALine.setAttribute("y1", String(legendAY));
+    view.legendALine.setAttribute("y2", String(legendAY));
+    view.legendA.setAttribute("x", formatNumber(legendATextX));
+    view.legendA.setAttribute("y", String(legendAY + 4));
+    view.legendA.textContent = legendA;
+
+    view.legendBLine.setAttribute("x1", formatNumber(legendBLineX1));
+    view.legendBLine.setAttribute("x2", formatNumber(legendBLineX2));
+    view.legendBLine.setAttribute("y1", String(legendBY));
+    view.legendBLine.setAttribute("y2", String(legendBY));
+    view.legendB.setAttribute("x", formatNumber(legendBTextX));
+    view.legendB.setAttribute("y", String(legendBY + 4));
+    view.legendB.textContent = legendB;
+  }
+
+  function updateInputMarker(line, point, targetX, result, minX, maxX, scaleX, scaleY, top, bottom) {
     if (result.ok && Number.isFinite(result.y)) {
-      var target = parseFiniteNumber(table.targetX);
+      var target = parseFiniteNumber(targetX);
       var clampedTarget = Math.min(maxX, Math.max(minX, target));
       var inputX = scaleX(clampedTarget);
       var inputY = scaleY(result.y);
@@ -548,20 +813,44 @@
     }
   }
 
-  function updateComparisonPlot(view, tableA, resultA, tableB, resultB) {
+  function updateComparisonPlot(view, tableA, resultA, tableB, resultB, targetX, plotSettings) {
+    var activePlotSettings = plotSettings || defaultPlotSettings();
     var pointsA = tableA.enabled ? getCompleteSortedPoints(tableA.rows) : [];
     var pointsB = tableB.enabled ? getCompleteSortedPoints(tableB.rows) : [];
     var combined = pointsA.concat(pointsB);
-    var plotWidth = Number(view.plotSvg.getAttribute("data-plot-width")) || DEFAULT_PLOT_WIDTH;
-    var plotHeight = Number(view.plotSvg.getAttribute("data-plot-height")) || DEFAULT_PLOT_HEIGHT;
-    var left = 34;
-    var right = Math.max(left + 20, plotWidth - 30);
-    var top = 14;
-    var bottom = Math.max(top + 20, plotHeight - 30);
+    var plotRect = view.plotSvg.getBoundingClientRect();
+    var plotWidth =
+      Math.round(plotRect.width) ||
+      Number(view.plotSvg.getAttribute("data-plot-width")) ||
+      DEFAULT_PLOT_WIDTH;
+    var plotHeight =
+      Math.round(plotRect.height) ||
+      Number(view.plotSvg.getAttribute("data-plot-height")) ||
+      DEFAULT_PLOT_HEIGHT;
+    var left = 68;
+    var right = Math.max(left + 80, plotWidth - 18);
+    var top = 42;
+    var bottom = Math.max(top + 40, plotHeight - 34);
     var middleX = (left + right) / 2;
     var middleY = (top + bottom) / 2;
+    var bounds = {
+      left: left,
+      right: right,
+      top: top,
+      bottom: bottom,
+    };
 
     view.plotSvg.setAttribute("viewBox", "0 0 " + plotWidth + " " + plotHeight);
+    updatePlotText(
+      view,
+      tableA,
+      tableB,
+      plotWidth,
+      plotHeight,
+      bounds,
+      activePlotSettings.xAxisLabel,
+      activePlotSettings.yAxisLabel,
+    );
     view.axisX.setAttribute("x1", String(left));
     view.axisX.setAttribute("y1", String(bottom));
     view.axisX.setAttribute("x2", String(right));
@@ -572,8 +861,6 @@
     view.axisY.setAttribute("y2", String(bottom));
     view.emptyText.setAttribute("x", String(middleX));
     view.emptyText.setAttribute("y", String(middleY));
-    view.legendA.textContent = tableA.versionInfo || defaultVersionInfo(0);
-    view.legendB.textContent = tableB.versionInfo || defaultVersionInfo(1);
 
     if (combined.length < 2 || (pointsA.length < 2 && pointsB.length < 2)) {
       view.lineA.setAttribute("points", "");
@@ -585,8 +872,8 @@
       view.inputLineB.style.display = "none";
       view.inputPointA.style.display = "none";
       view.inputPointB.style.display = "none";
-      view.xMin.textContent = "--";
-      view.xMax.textContent = "--";
+      clearChildren(view.xTicks);
+      clearChildren(view.yTicks);
       return;
     }
 
@@ -600,6 +887,19 @@
     var maxX = Math.max.apply(null, xValues);
     var minY = Math.min.apply(null, yValues);
     var maxY = Math.max.apply(null, yValues);
+    var manualXRange = readManualRange(activePlotSettings.xMin, activePlotSettings.xMax);
+    var manualYRange = readManualRange(activePlotSettings.yMin, activePlotSettings.yMax);
+
+    if (manualXRange) {
+      minX = manualXRange.min;
+      maxX = manualXRange.max;
+    }
+
+    if (manualYRange) {
+      minY = manualYRange.min;
+      maxY = manualYRange.max;
+    }
+
     var scaleX = makeScale(minX, maxX, left, right);
     var scaleY = makeScale(minY, maxY, bottom, top);
 
@@ -608,12 +908,11 @@
     view.lineB.setAttribute("points", pointsB.length >= 2 ? linePoints(pointsB, scaleX, scaleY) : "");
     drawDots(view.layerA, pointsA, scaleX, scaleY, "plot-dot-a");
     drawDots(view.layerB, pointsB, scaleX, scaleY, "plot-dot-b");
-    view.xMin.textContent = "x " + formatNumber(minX);
-    view.xMax.textContent = "x " + formatNumber(maxX);
+    drawTicks(view, minX, maxX, minY, maxY, scaleX, scaleY, bounds);
     updateInputMarker(
       view.inputLineA,
       view.inputPointA,
-      tableA,
+      targetX,
       resultA,
       minX,
       maxX,
@@ -625,7 +924,7 @@
     updateInputMarker(
       view.inputLineB,
       view.inputPointB,
-      tableB,
+      targetX,
       resultB,
       minX,
       maxX,
@@ -641,13 +940,6 @@
     var savedState = readSavedState();
     var state = savedState.state;
     var allTargetInput = documentRef.getElementById("all-target-x");
-    var applyTargetButton = documentRef.getElementById("apply-target-x");
-    var allRowCountInput = documentRef.getElementById("all-row-count");
-    var applyRowCountButton = documentRef.getElementById("apply-row-count");
-    var splitPercentInput = documentRef.getElementById("split-percent");
-    var plotWidthInput = documentRef.getElementById("plot-width");
-    var plotHeightInput = documentRef.getElementById("plot-height");
-    var resetSampleButton = documentRef.getElementById("reset-sample");
     var clearAllButton = documentRef.getElementById("clear-all");
     var saveStateNode = documentRef.getElementById("save-state");
     var tableGrid = documentRef.getElementById("table-grid");
@@ -655,10 +947,16 @@
     var versionTemplate = documentRef.getElementById("version-table-template");
     var tableViews = [];
     var pairViews = [];
+    var resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(function () {
+            calculateAll();
+          })
+        : null;
 
     function updateTableView(table, tableIndex, result) {
       var view = tableViews[tableIndex];
-      var resultText = result.ok ? formatNumber(result.y) : "--";
+      var resultText = result.ok ? formatOutputValue(result.y) : "--";
       var statusClass =
         result.level === "ok"
           ? "status-ok"
@@ -675,7 +973,7 @@
     function calculateAll() {
       var results = state.tables.map(function (table) {
         return table.enabled
-          ? calculateLinearInterpolation(table.rows, table.targetX)
+          ? calculateLinearInterpolation(table.rows, state.targetX)
           : {
               ok: false,
               level: "warn",
@@ -691,12 +989,15 @@
 
       pairViews.forEach(function (view, pairIndex) {
         var tableIndex = pairIndex * 2;
+        var plotSettings = state.plotSettings[pairIndex] || defaultPlotSettings();
         updateComparisonPlot(
           view,
           state.tables[tableIndex],
           results[tableIndex],
           state.tables[tableIndex + 1],
           results[tableIndex + 1],
+          state.targetX,
+          plotSettings,
         );
       });
     }
@@ -706,14 +1007,71 @@
       calculateAll();
     }
 
+    function syncGlobalControls() {
+      allTargetInput.value = state.targetX;
+    }
+
+    function setPairSplitPercent(pairIndex, nextPercent) {
+      state.pairSplits[pairIndex] = clampInteger(
+        Math.round(nextPercent),
+        35,
+        75,
+        DEFAULT_SPLIT_PERCENT,
+      );
+      applyLayoutSettings(documentRef, state, pairViews);
+      persistAndCalculate();
+    }
+
+    function attachSplitDrag(card, handle, pairIndex, splitInput) {
+      handle.addEventListener("pointerdown", function (event) {
+        var rect = card.getBoundingClientRect();
+
+        if (rect.width <= 0 || window.matchMedia("(max-width: 1120px)").matches) {
+          return;
+        }
+
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+
+        function updateFromPointer(pointerEvent) {
+          var currentRect = card.getBoundingClientRect();
+          var nextPercent = ((pointerEvent.clientX - currentRect.left) / currentRect.width) * 100;
+          setPairSplitPercent(pairIndex, nextPercent);
+          splitInput.value = String(state.pairSplits[pairIndex]);
+        }
+
+        function stopDrag(pointerEvent) {
+          handle.releasePointerCapture(pointerEvent.pointerId);
+          handle.removeEventListener("pointermove", updateFromPointer);
+          handle.removeEventListener("pointerup", stopDrag);
+          handle.removeEventListener("pointercancel", stopDrag);
+        }
+
+        handle.addEventListener("pointermove", updateFromPointer);
+        handle.addEventListener("pointerup", stopDrag);
+        handle.addEventListener("pointercancel", stopDrag);
+        updateFromPointer(event);
+      });
+
+      handle.addEventListener("keydown", function (event) {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          setPairSplitPercent(pairIndex, state.pairSplits[pairIndex] - 1);
+          splitInput.value = String(state.pairSplits[pairIndex]);
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          setPairSplitPercent(pairIndex, state.pairSplits[pairIndex] + 1);
+          splitInput.value = String(state.pairSplits[pairIndex]);
+        }
+      });
+    }
+
     function renderVersionTable(table, tableIndex, pairView) {
       var fragment = versionTemplate.content.cloneNode(true);
       var panel = fragment.querySelector(".version-table");
       var enabledInput = fragment.querySelector(".table-enabled");
       var versionInput = fragment.querySelector(".table-version");
-      var tableTargetInput = fragment.querySelector(".table-target-x");
       var rowCountInput = fragment.querySelector(".row-count");
-      var sampleButton = fragment.querySelector(".sample-table");
       var clearButton = fragment.querySelector(".clear-table");
       var resultY = fragment.querySelector(".table-result-y");
       var resultDetail = fragment.querySelector(".table-result-detail");
@@ -721,7 +1079,6 @@
 
       enabledInput.checked = table.enabled;
       versionInput.value = table.versionInfo;
-      tableTargetInput.value = table.targetX;
       rowCountInput.value = String(table.rows.length);
 
       enabledInput.addEventListener("change", function () {
@@ -736,21 +1093,9 @@
         persistAndCalculate();
       });
 
-      tableTargetInput.addEventListener("input", function () {
-        table.targetX = tableTargetInput.value;
-        state.targetX = tableTargetInput.value;
-        persistAndCalculate();
-      });
-
       rowCountInput.addEventListener("change", function () {
         setRowCount(table, rowCountInput.value, tableIndex);
         rowCountInput.value = String(table.rows.length);
-        renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate);
-        persistAndCalculate();
-      });
-
-      sampleButton.addEventListener("click", function () {
-        table.rows = makeRows(table.rows.length, tableIndex, true);
         renderBreakpointRows(breakpointBody, table, tableIndex, persistAndCalculate);
         persistAndCalculate();
       });
@@ -765,7 +1110,6 @@
 
       tableViews[tableIndex] = {
         panel: panel,
-        targetXInput: tableTargetInput,
         resultY: resultY,
         resultDetail: resultDetail,
       };
@@ -777,9 +1121,25 @@
       var fragment = comparisonTemplate.content.cloneNode(true);
       var card = fragment.querySelector(".comparison-card");
       var stack = fragment.querySelector(".version-stack");
+      var splitHandle = fragment.querySelector(".split-handle");
+      var pairNameInput = fragment.querySelector(".pair-table-name");
+      var pairSplitInput = fragment.querySelector(".pair-split-percent");
+      var plotWidthInput = fragment.querySelector(".pair-plot-width");
+      var plotHeightInput = fragment.querySelector(".pair-plot-height");
+      var xAxisLabelInput = fragment.querySelector(".pair-x-axis-label");
+      var yAxisLabelInput = fragment.querySelector(".pair-y-axis-label");
+      var xMinInput = fragment.querySelector(".pair-x-min");
+      var xMaxInput = fragment.querySelector(".pair-x-max");
+      var yMinInput = fragment.querySelector(".pair-y-min");
+      var yMaxInput = fragment.querySelector(".pair-y-max");
       var pairView = {
         card: card,
         plotSvg: fragment.querySelector(".comparison-plot"),
+        plotTitle: fragment.querySelector(".plot-title"),
+        xTicks: fragment.querySelector(".plot-x-ticks"),
+        yTicks: fragment.querySelector(".plot-y-ticks"),
+        xLabel: fragment.querySelector(".plot-x-label"),
+        yLabel: fragment.querySelector(".plot-y-label"),
         axisX: fragment.querySelector(".plot-axis-x"),
         axisY: fragment.querySelector(".plot-axis-y"),
         lineA: fragment.querySelector(".plot-line-a"),
@@ -791,20 +1151,139 @@
         layerA: fragment.querySelector(".plot-point-layer-a"),
         layerB: fragment.querySelector(".plot-point-layer-b"),
         emptyText: fragment.querySelector(".plot-empty"),
-        xMin: fragment.querySelector(".plot-x-min"),
-        xMax: fragment.querySelector(".plot-x-max"),
+        legendALine: fragment.querySelector(".legend-a-line"),
+        legendBLine: fragment.querySelector(".legend-b-line"),
         legendA: fragment.querySelector(".legend-a-text"),
         legendB: fragment.querySelector(".legend-b-text"),
       };
       var tableIndex = pairIndex * 2;
+      var plotSettings = state.plotSettings[pairIndex] || defaultPlotSettings();
 
       pairViews[pairIndex] = pairView;
+      if (resizeObserver) {
+        resizeObserver.observe(pairView.plotSvg);
+      }
+      pairNameInput.value = state.tables[tableIndex].name;
+      pairNameInput.addEventListener("input", function () {
+        var sharedName = pairNameInput.value.trim() || defaultTableName(pairIndex);
+        state.tables[tableIndex].name = sharedName;
+        state.tables[tableIndex + 1].name = sharedName;
+        persistAndCalculate();
+      });
+      pairSplitInput.value = String(state.pairSplits[pairIndex] || DEFAULT_SPLIT_PERCENT);
+      pairSplitInput.addEventListener("input", function () {
+        state.pairSplits[pairIndex] = updateNumberControl(
+          pairSplitInput,
+          state.pairSplits[pairIndex],
+          35,
+          75,
+          DEFAULT_SPLIT_PERCENT,
+          false,
+        );
+        applyLayoutSettings(documentRef, state, pairViews);
+        persistAndCalculate();
+      });
+      pairSplitInput.addEventListener("change", function () {
+        state.pairSplits[pairIndex] = updateNumberControl(
+          pairSplitInput,
+          state.pairSplits[pairIndex],
+          35,
+          75,
+          DEFAULT_SPLIT_PERCENT,
+          true,
+        );
+        applyLayoutSettings(documentRef, state, pairViews);
+        persistAndCalculate();
+      });
+      plotWidthInput.value = String(plotSettings.width);
+      plotWidthInput.addEventListener("input", function () {
+        plotSettings.width = updateNumberControl(
+          plotWidthInput,
+          plotSettings.width,
+          300,
+          1800,
+          DEFAULT_PLOT_WIDTH,
+          false,
+        );
+        state.plotSettings[pairIndex] = plotSettings;
+        applyLayoutSettings(documentRef, state, pairViews);
+        persistAndCalculate();
+      });
+      plotWidthInput.addEventListener("change", function () {
+        plotSettings.width = updateNumberControl(
+          plotWidthInput,
+          plotSettings.width,
+          300,
+          1800,
+          DEFAULT_PLOT_WIDTH,
+          true,
+        );
+        state.plotSettings[pairIndex] = plotSettings;
+        applyLayoutSettings(documentRef, state, pairViews);
+        persistAndCalculate();
+      });
+      plotHeightInput.value = String(plotSettings.height);
+      plotHeightInput.addEventListener("input", function () {
+        plotSettings.height = updateNumberControl(
+          plotHeightInput,
+          plotSettings.height,
+          120,
+          520,
+          DEFAULT_PLOT_HEIGHT,
+          false,
+        );
+        state.plotSettings[pairIndex] = plotSettings;
+        applyLayoutSettings(documentRef, state, pairViews);
+        persistAndCalculate();
+      });
+      plotHeightInput.addEventListener("change", function () {
+        plotSettings.height = updateNumberControl(
+          plotHeightInput,
+          plotSettings.height,
+          120,
+          520,
+          DEFAULT_PLOT_HEIGHT,
+          true,
+        );
+        state.plotSettings[pairIndex] = plotSettings;
+        applyLayoutSettings(documentRef, state, pairViews);
+        persistAndCalculate();
+      });
+      xAxisLabelInput.value = plotSettings.xAxisLabel;
+      xAxisLabelInput.addEventListener("input", function () {
+        plotSettings.xAxisLabel = xAxisLabelInput.value.trim() || "X";
+        state.plotSettings[pairIndex] = plotSettings;
+        persistAndCalculate();
+      });
+      yAxisLabelInput.value = plotSettings.yAxisLabel;
+      yAxisLabelInput.addEventListener("input", function () {
+        plotSettings.yAxisLabel = yAxisLabelInput.value.trim() || "Y";
+        state.plotSettings[pairIndex] = plotSettings;
+        persistAndCalculate();
+      });
+      function bindRangeInput(input, key) {
+        input.value = plotSettings[key] || "";
+        input.addEventListener("input", function () {
+          plotSettings[key] = input.value.trim();
+          state.plotSettings[pairIndex] = plotSettings;
+          persistAndCalculate();
+        });
+      }
+
+      bindRangeInput(xMinInput, "xMin");
+      bindRangeInput(xMaxInput, "xMax");
+      bindRangeInput(yMinInput, "yMin");
+      bindRangeInput(yMaxInput, "yMax");
+      attachSplitDrag(card, splitHandle, pairIndex, pairSplitInput);
       stack.appendChild(renderVersionTable(state.tables[tableIndex], tableIndex, pairView));
       stack.appendChild(renderVersionTable(state.tables[tableIndex + 1], tableIndex + 1, pairView));
       tableGrid.appendChild(fragment);
     }
 
     function renderAllPairs() {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       tableGrid.replaceChildren();
       tableViews = [];
       pairViews = [];
@@ -815,10 +1294,6 @@
     }
 
     allTargetInput.value = state.targetX;
-    allRowCountInput.value = String(DEFAULT_ROW_COUNT);
-    splitPercentInput.value = String(state.splitPercent);
-    plotWidthInput.value = String(state.plotWidth);
-    plotHeightInput.value = String(state.plotHeight);
     renderAllPairs();
 
     if (savedState.error) {
@@ -834,36 +1309,8 @@
       setSaveStatus(saveStateNode, "Using sample data", "warn");
       saveState(state, saveStateNode);
     }
-
     allTargetInput.addEventListener("input", function () {
       state.targetX = allTargetInput.value;
-      saveState(state, saveStateNode);
-    });
-
-    applyTargetButton.addEventListener("click", function () {
-      state.targetX = allTargetInput.value;
-      state.tables.forEach(function (table, tableIndex) {
-        table.targetX = allTargetInput.value;
-        if (tableViews[tableIndex]) {
-          tableViews[tableIndex].targetXInput.value = allTargetInput.value;
-        }
-      });
-      persistAndCalculate();
-    });
-
-    applyRowCountButton.addEventListener("click", function () {
-      var nextCount = clampInteger(
-        allRowCountInput.value,
-        1,
-        MAX_ROW_COUNT,
-        DEFAULT_ROW_COUNT,
-      );
-
-      state.tables.forEach(function (table, tableIndex) {
-        setRowCount(table, nextCount, tableIndex);
-      });
-
-      renderAllPairs();
       persistAndCalculate();
     });
 
@@ -886,74 +1333,6 @@
 
       return nextValue;
     }
-
-    function updateSplit(commit) {
-      state.splitPercent = updateNumberControl(
-        splitPercentInput,
-        state.splitPercent,
-        35,
-        75,
-        DEFAULT_SPLIT_PERCENT,
-        commit,
-      );
-      applyLayoutSettings(documentRef, state, pairViews);
-      persistAndCalculate();
-    }
-
-    function updatePlotWidth(commit) {
-      state.plotWidth = updateNumberControl(
-        plotWidthInput,
-        state.plotWidth,
-        300,
-        1800,
-        DEFAULT_PLOT_WIDTH,
-        commit,
-      );
-      applyLayoutSettings(documentRef, state, pairViews);
-      persistAndCalculate();
-    }
-
-    function updatePlotHeight(commit) {
-      state.plotHeight = updateNumberControl(
-        plotHeightInput,
-        state.plotHeight,
-        120,
-        520,
-        DEFAULT_PLOT_HEIGHT,
-        commit,
-      );
-      applyLayoutSettings(documentRef, state, pairViews);
-      persistAndCalculate();
-    }
-
-    splitPercentInput.addEventListener("input", function () {
-      updateSplit(false);
-    });
-    splitPercentInput.addEventListener("change", function () {
-      updateSplit(true);
-    });
-    plotWidthInput.addEventListener("input", function () {
-      updatePlotWidth(false);
-    });
-    plotWidthInput.addEventListener("change", function () {
-      updatePlotWidth(true);
-    });
-    plotHeightInput.addEventListener("input", function () {
-      updatePlotHeight(false);
-    });
-    plotHeightInput.addEventListener("change", function () {
-      updatePlotHeight(true);
-    });
-
-    resetSampleButton.addEventListener("click", function () {
-      state = makeDefaultState();
-      allTargetInput.value = state.targetX;
-      splitPercentInput.value = String(state.splitPercent);
-      plotWidthInput.value = String(state.plotWidth);
-      plotHeightInput.value = String(state.plotHeight);
-      renderAllPairs();
-      persistAndCalculate();
-    });
 
     clearAllButton.addEventListener("click", function () {
       state.tables.forEach(function (table, tableIndex) {
@@ -981,6 +1360,7 @@
     DEFAULT_PLOT_HEIGHT: DEFAULT_PLOT_HEIGHT,
     DEFAULT_SPLIT_PERCENT: DEFAULT_SPLIT_PERCENT,
     calculateLinearInterpolation: calculateLinearInterpolation,
+    formatOutputValue: formatOutputValue,
     formatNumber: formatNumber,
     getCompleteSortedPoints: getCompleteSortedPoints,
     makeDefaultState: makeDefaultState,

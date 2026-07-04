@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const {
   calculateLinearInterpolation,
+  formatOutputValue,
   getCompleteSortedPoints,
   normalizeState,
   PAIR_COUNT,
@@ -22,6 +23,9 @@ assert.equal(y(rows, "5"), 50);
 assert.equal(y(rows, "10"), 100);
 assert.equal(y(rows, "-1"), 0);
 assert.equal(y(rows, "25"), 200);
+assert.equal(formatOutputValue(1 / 3), "0.333");
+assert.equal(formatOutputValue(2), "2.000");
+assert.equal(formatOutputValue(-0), "0.000");
 
 const unsortedRows = [
   { x: "20", y: "200" },
@@ -72,14 +76,52 @@ const migratedState = normalizeState({
     },
   ],
 });
-assert.equal(migratedState.tables[0].targetX, "12.5");
-assert.equal(migratedState.tables[0].versionInfo, "Legacy Table");
+assert.equal(migratedState.targetX, "12.5");
+assert.equal(Object.hasOwn(migratedState.tables[0], "targetX"), false);
+assert.equal(migratedState.tables[0].name, "Legacy Table");
+assert.equal(migratedState.tables[1].name, "Legacy Table");
+assert.equal(migratedState.tables[0].versionInfo, "Version A");
+assert.equal(migratedState.tables[1].versionInfo, "Version B");
 assert.equal(migratedState.tables.length, 8);
 assert.equal(PAIR_COUNT, 4);
 assert.equal(migratedState.updatedAt, "2026-07-04T00:00:00.000Z");
 assert.equal(migratedState.plotWidth, 900);
 assert.equal(migratedState.plotHeight, 120);
 assert.equal(migratedState.splitPercent, 60);
+assert.deepEqual(migratedState.pairSplits, [60, 60, 60, 60]);
+assert.equal(migratedState.xAxisLabel, "X");
+assert.equal(migratedState.yAxisLabel, "Y");
+assert.deepEqual(migratedState.plotSettings, [
+  { width: 900, height: 120, xAxisLabel: "X", yAxisLabel: "Y", xMin: "", xMax: "", yMin: "", yMax: "" },
+  { width: 900, height: 120, xAxisLabel: "X", yAxisLabel: "Y", xMin: "", xMax: "", yMin: "", yMax: "" },
+  { width: 900, height: 120, xAxisLabel: "X", yAxisLabel: "Y", xMin: "", xMax: "", yMin: "", yMax: "" },
+  { width: 900, height: 120, xAxisLabel: "X", yAxisLabel: "Y", xMin: "", xMax: "", yMin: "", yMax: "" },
+]);
+
+const rangedState = normalizeState({
+  plotSettings: [
+    {
+      width: 640,
+      height: 260,
+      xAxisLabel: "Speed",
+      yAxisLabel: "Angle",
+      xMin: "0",
+      xMax: "80",
+      yMin: "55",
+      yMax: "430",
+    },
+  ],
+});
+assert.deepEqual(rangedState.plotSettings[0], {
+  width: 640,
+  height: 260,
+  xAxisLabel: "Speed",
+  yAxisLabel: "Angle",
+  xMin: "0",
+  xMax: "80",
+  yMin: "55",
+  yMax: "430",
+});
 
 assert.deepEqual(getCompleteSortedPoints(unsortedRows), [
   { x: 0, y: 0 },

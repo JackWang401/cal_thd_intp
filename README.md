@@ -6,13 +6,15 @@ Static browser tool for checking linear interpolation and comparing four pairs o
 
 - Eight editable tables are grouped into four comparison rows.
 - Each comparison row has two vertically stacked table versions on the left and one shared plot on the right.
+- Each comparison row has one shared table name for both stacked versions.
 - Each table displays breakpoints horizontally, with one `X` row and one `Y` row.
-- Each table has its own `Input X` field and `Output Y` result field.
+- One global `All X` field is used for interpolation across every table and version.
+- Each table displays its own `Output Y` result field.
 - Each version has a version-info field used as the plot legend.
-- The shared plot draws both version curves with different colors.
-- The `Split %` control adjusts the border position between the table pane and plot pane.
-- Plot width and height can be adjusted with `Plot W` and `Plot H`.
-- The `All X` control can apply one input value to every table.
+- The shared plot draws both version curves with different colors, numeric X/Y ticks, editable axis labels, and the shared table name as its title.
+- Each comparison row has its own `Split %` control and draggable divider for adjusting the border position between the table pane and plot pane.
+- Each plot has its own `Plot W`, `Plot H`, axis label, and X/Y range controls.
+- The `All X` control applies one input value to every table and version as it is edited.
 - Out-of-range `x` values clamp to the nearest endpoint `y`.
 - Each table can use a different number of breakpoints, from 1 to 64 points.
 - Breakpoints may be entered in any order; calculation sorts by `x`.
@@ -24,15 +26,16 @@ Static browser tool for checking linear interpolation and comparing four pairs o
 
 Open `index.html` in a browser.
 
-1. Enter the target value in a table's `Input X` field.
+1. Enter the shared interpolation value in the `All X` field.
 2. Edit that table's horizontal `X` and `Y` breakpoint rows.
-3. Adjust each table's `Points` value, or use the global `Points` field with `Apply Points`.
+3. Adjust each table's `Points` value when that table needs more or fewer breakpoints.
 4. Read the interpolated or clamped value in that table's `Output Y` field.
-5. Use `All X` and `Apply X` when every table should use the same input value.
+5. Edit `All X` to update the interpolation input for all tables and versions.
 6. Use each row's right-side plot to compare the two version curves.
-7. Adjust `Split %`, `Plot W`, or `Plot H` to resize the comparison layout.
+7. Adjust a row's `Split %` or drag its divider to resize that row's table/plot border.
+8. Adjust a row's `Plot W`, `Plot H`, axis labels, or X/Y ranges to customize that plot.
 
-The tool remembers version info, enabled states, point counts, X/Y breakpoints, input X values, split position, and plot size in the same browser.
+The tool remembers shared table names, version info, enabled states, point counts, X/Y breakpoints, the global input X value, row split positions, and per-plot size, axis label, and range settings in the same browser.
 
 ## Version Control
 

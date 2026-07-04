@@ -6,10 +6,10 @@
   --muted: #66717d;
   --line: #d9dfe5;
   --line-strong: #b8c2cc;
-  --accent: #146c70;
-  --accent-strong: #0f5558;
-  --accent-soft: #e8f4f3;
-  --compare: #7a4db3;
+  --accent: #3f444a;
+  --accent-strong: #2c3136;
+  --accent-soft: #eef0f2;
+  --compare: #c94f4f;
   --danger: #b83b35;
   --warn: #875a00;
   --ok: #246b3d;
@@ -133,6 +133,10 @@ h1 {
   width: 58px;
 }
 
+.field.label-field {
+  width: 82px;
+}
+
 .save-state {
   margin: 6px 2px 0;
   color: var(--muted);
@@ -160,7 +164,7 @@ h1 {
 
 .comparison-card {
   display: grid;
-  grid-template-columns: minmax(420px, var(--split-percent)) minmax(300px, 1fr);
+  grid-template-columns: minmax(420px, var(--pair-split-percent, var(--split-percent))) 6px minmax(300px, 1fr);
   min-width: 0;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -171,9 +175,83 @@ h1 {
 
 .version-stack {
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: auto auto 1fr 1fr;
   min-width: 0;
-  border-right: 3px solid var(--line-strong);
+}
+
+.split-handle {
+  min-width: 6px;
+  background: linear-gradient(90deg, var(--line), var(--line-strong), var(--line));
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.split-handle:hover,
+.split-handle:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+
+.pair-name-field {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfd;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  padding: 5px 6px;
+}
+
+.pair-split-field {
+  display: grid;
+  grid-template-columns: 52px 64px;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfd;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  padding: 5px 6px;
+}
+
+.pair-name-field input,
+.pair-split-field input {
+  color: var(--text);
+  font-weight: 760;
+}
+
+.pair-plot-settings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(58px, 1fr));
+  gap: 6px;
+  align-items: end;
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 0 5px;
+}
+
+.pair-setting-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.pair-setting-field input {
+  color: var(--text);
+  font-weight: 760;
+}
+
+.pair-setting-field.label-field {
+  min-width: 82px;
 }
 
 .version-table {
@@ -187,7 +265,7 @@ h1 {
 
 .version-header {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 76px 82px 56px auto;
+  grid-template-columns: minmax(120px, 1fr) 82px 56px auto;
   gap: 6px;
   align-items: end;
   border-bottom: 1px solid var(--line);
@@ -196,9 +274,12 @@ h1 {
 
 .table-title {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 18px auto minmax(0, 1fr);
   gap: 5px;
   align-items: end;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .table-title input[type="checkbox"] {
@@ -209,6 +290,7 @@ h1 {
 }
 
 .table-version {
+  color: var(--text);
   font-weight: 720;
 }
 
@@ -320,18 +402,18 @@ h1 {
 
 .comparison-plot-wrap {
   display: grid;
-  align-content: stretch;
-  gap: 3px;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 2px;
   min-width: 0;
   background: #fbfcfd;
-  padding: 5px 6px 4px;
+  padding: 2px 4px;
 }
 
 .comparison-plot {
   display: block;
   width: min(100%, var(--plot-width));
   height: var(--plot-height);
-  align-self: stretch;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 5px;
@@ -341,6 +423,39 @@ h1 {
 .plot-axis-y {
   stroke: var(--line-strong);
   stroke-width: 1;
+}
+
+.plot-tick-line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.plot-tick-text,
+.plot-axis-label,
+.plot-title,
+.plot-legend-text {
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.plot-tick-text {
+  font-size: 10px;
+}
+
+.plot-title {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.plot-axis-label {
+  font-size: 11px;
+  font-weight: 760;
+  text-anchor: middle;
+}
+
+.plot-y-label {
+  dominant-baseline: middle;
 }
 
 .plot-line {
@@ -360,12 +475,16 @@ h1 {
   stroke: var(--compare);
 }
 
-.legend-a {
+.legend-a,
+.legend-a-line {
   border-top-color: var(--accent);
+  stroke: var(--accent);
 }
 
-.legend-b {
+.legend-b,
+.legend-b-line {
   border-top-color: var(--compare);
+  stroke: var(--compare);
 }
 
 .plot-dot {
@@ -403,42 +522,14 @@ h1 {
   text-anchor: middle;
 }
 
-.plot-footer {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
+.plot-legend-line {
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 
-.plot-scale,
-.plot-legend {
-  display: flex;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  min-width: 0;
-}
-
-.plot-scale {
-  justify-content: space-between;
-}
-
-.plot-legend span {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.legend-swatch {
-  display: inline-block;
-  width: 16px;
-  border-top-width: 2px;
-  border-top-style: solid;
+.plot-legend-text {
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .version-table.disabled {
@@ -464,8 +555,11 @@ h1 {
   }
 
   .version-stack {
-    border-right: 0;
     border-bottom: 3px solid var(--line-strong);
+  }
+
+  .split-handle {
+    display: none;
   }
 }
 
@@ -480,7 +574,7 @@ h1 {
 
   .global-controls {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .field,
