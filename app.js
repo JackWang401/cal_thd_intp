@@ -178,13 +178,44 @@
     });
   }
 
-  function stripExcelLabel(value) {
+  function normalizePastedNumber(value) {
     var text = value === undefined || value === null ? "" : String(value).trim();
-    return /^(x|y|#|point|points)$/i.test(text) ? "" : text;
+    var isNegative = false;
+    var normalized;
+    var parsed;
+
+    if (text === "" || /^(x|y|#|point|points)$/i.test(text)) {
+      return "";
+    }
+
+    text = text.replace(/\u2212/g, "-");
+
+    if (/^\(.*\)$/.test(text)) {
+      isNegative = true;
+      text = text.slice(1, -1).trim();
+    }
+
+    normalized = text
+      .replace(/[%％]\s*$/u, "")
+      .replace(/[$€£¥￥]/g, "")
+      .replace(/,/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+
+    if (isNegative && normalized.charAt(0) !== "-") {
+      normalized = "-" + normalized;
+    }
+
+    if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(normalized)) {
+      return "";
+    }
+
+    parsed = Number(normalized);
+    return Number.isFinite(parsed) ? formatNumber(parsed) : "";
   }
 
   function hasClipboardValue(value) {
-    return stripExcelLabel(value) !== "";
+    return normalizePastedNumber(value) !== "";
   }
 
   function parseClipboardRows(text) {
@@ -224,7 +255,7 @@
 
     if (looksVertical) {
       clipboardRows.some(function (row) {
-        var values = row.map(stripExcelLabel).filter(function (value) {
+        var values = row.map(normalizePastedNumber).filter(function (value) {
           return value !== "";
         });
 
@@ -242,10 +273,10 @@
     }
 
     if (clipboardRows.length >= 2) {
-      var xValues = clipboardRows[0].map(stripExcelLabel).filter(function (value) {
+      var xValues = clipboardRows[0].map(normalizePastedNumber).filter(function (value) {
         return value !== "";
       });
-      var yValues = clipboardRows[1].map(stripExcelLabel).filter(function (value) {
+      var yValues = clipboardRows[1].map(normalizePastedNumber).filter(function (value) {
         return value !== "";
       });
       var horizontalCount = Math.min(xValues.length, yValues.length, MAX_ROW_COUNT);

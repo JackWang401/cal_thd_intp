@@ -30,6 +30,15 @@ assert.equal(formatOutputValue(-0), "0.000");
 assert.deepEqual(parsePastedTable("X\t0\t10\t20\nY\t0\t100\t200"), rows);
 assert.deepEqual(parsePastedTable("0\t0\n10\t100\n20\t200"), rows);
 assert.deepEqual(parsePastedTable("X\tY\n0\t0\n10\t100\n20\t200"), rows);
+assert.deepEqual(parsePastedTable("X\t0%\t10.5%\t20%\nY\t0%\t100%\t200.25%"), [
+  { x: "0", y: "0" },
+  { x: "10.5", y: "100" },
+  { x: "20", y: "200.25" },
+]);
+assert.deepEqual(parsePastedTable("1,000\t$2,500.50\n(20)\t−30"), [
+  { x: "1000", y: "2500.5" },
+  { x: "-20", y: "-30" },
+]);
 
 const unsortedRows = [
   { x: "20", y: "200" },

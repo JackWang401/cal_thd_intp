@@ -22,6 +22,8 @@ This document consolidates the user-entered requirements for the table interpola
 - Each table shall support editable X breakpoints and Y values.
 - Each table shall support pasting X/Y data copied from Excel into a breakpoint cell.
 - Pasted Excel data may be arranged as two horizontal rows or as two vertical columns.
+- Pasted Excel data shall support common formatted numeric text, including percentages, comma group separators, currency symbols, accounting parentheses, and Unicode minus signs.
+- Percentage-formatted pasted values shall be stored as their displayed numeric value without the percent sign.
 - The table point count shall adjust automatically to the number of pasted X/Y points.
 - The application shall support one editable global input X value for interpolation.
 - Each table shall display a calculated output Y result from the global input X value.
